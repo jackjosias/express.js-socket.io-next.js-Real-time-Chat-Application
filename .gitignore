@@ -1,19 +1,20 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 
 # testing
-/coverage
+coverage/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
+dist/
 
 # misc
 .DS_Store
@@ -23,9 +24,28 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
+!*.env.example
+
+# local editor / agent runtime state
+.codex/
+.vscode/
+
+# generated project memory and reports
+graphify-out/
+scribe-out/
+.agent/workflow/scribe-engineering-rag/graphify-out/
+.agent/skills/graphify/.graphify_version
+
+# python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
 # vercel
 .vercel
