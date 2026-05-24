@@ -30,6 +30,7 @@ tiers:
     - "PAT-015"
     - "PAT-016"
     - "PAT-017"
+    - "PAT-018"
   warm:
     - "DEBT-001"
     - "GHOST-001"
@@ -602,6 +603,32 @@ patterns:
       verdict: "still_valid"
     status_log: []
     tier_log: []
+  - id: "PAT-018"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "retrieval"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-036"
+      observable: "`./scribe hot --topic`, quick context packs, py_compile, installer dry-run, and 24 bundle unit tests passed after ranking hot memory by topic and recency."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Ranked hot-memory retrieval"
+    l0_abstract: "Bounded hot-memory output must be ranked by topic relevance when a topic is provided, and by recent validation/source signal otherwise."
+    pourquoi: "Capping hot memory without ranking hides the newest or most relevant causal signals behind registry order. Ranking keeps the low-friction path short while making the first entries useful for the task at hand."
+    contexte: "SCRIBE hot/context retrieval, agent grounding speed, and topic-focused coding sessions."
+    liens_causaux:
+      source: "JOURNAL-036"
+      renforce: ["PAT-007", "PAT-012", "PAT-016", "PAT-017", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-036"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
 ghosts:
   - id: "GHOST-001"
     tier: "warm"
@@ -1000,8 +1027,24 @@ journal:
       - "./scribe install . --dry-run: all adapters unchanged"
       - "unittest discover: 24 tests passed"
     scribe_delta: "PAT-017 | JOURNAL-035"
+  - id: "JOURNAL-036"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-007", "PAT-012", "PAT-016", "PAT-017", "PAT-018", "VAC-005"]
+    l0_abstract: "Ranked hot-memory retrieval by recency and optional topic relevance."
+    pourquoi: "The capped `hot` output reduced friction but still reflected registry order, which can hide the newest causal learning or the memory most relevant to the current task. Sharing one ranking path across `hot` and `context` keeps retrieval deterministic, local, and short while improving real signal density."
+    validations:
+      - "py_compile: scribe_memory.py, scribe_memory_context.py, and test_scribe_memory.py compiled"
+      - "unittest discover: 24 tests passed"
+      - "./scribe hot --limit 5: newest/recent hot signals ranked first"
+      - "./scribe hot --topic context friction --limit 5: friction/context memories ranked first"
+      - "./scribe context --mode quick --topic context friction: hot_by_topic emitted"
+      - "./scribe doctor --suggest-fix: 0 errors, 5 legacy warnings"
+      - "./scribe install . --dry-run: all adapters unchanged"
+      - "git diff --check: clean"
+    scribe_delta: "PAT-018 | JOURNAL-036"
 metrics:
-  sessions_total: 35
+  sessions_total: 36
   scars_total: 0
   vaccins_actifs: 5
   taux_recidive: 0.0
@@ -1009,7 +1052,7 @@ metrics:
   complexite_moyenne: 0.0
   mode_distribution:
     CRITICAL: 11
-    STANDARD: 21
+    STANDARD: 22
     QUICK: 3
   dette_p0_p1_courante: 1
   dezoom_total: 0
@@ -1018,5 +1061,5 @@ metrics:
   torvalds_items_traites: 0
   taux_completion_prod_moyenne: 0.0
   delta_feuille_vs_prod_moyen: 0.0
-  graphify_queries_total: 13
-  tokens_saved_via_graphify: 70000
+  graphify_queries_total: 15
+  tokens_saved_via_graphify: 71000
