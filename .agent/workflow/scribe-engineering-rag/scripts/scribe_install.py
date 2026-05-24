@@ -35,6 +35,7 @@ SHIM_MODULES = (
     "scribe_memory",
     "scribe_memory_admin",
     "scribe_memory_archive",
+    "scribe_memory_context",
     "scribe_memory_dashboard",
     "scribe_worktree",
     "scribe_search",
@@ -47,7 +48,7 @@ SHIM_MODULES = (
     "scribe_dashboard_view",
 )
 CLI_SHIM_MODULES = {"scribe_bundle_graph", "scribe_doctor", "scribe_guard", "scribe_install", "scribe_memory", "scribe_worktree"}
-MEMORY_COMMANDS = {"hot", "stats", "explain", "related", "query", "challenge", "compact", "promote", "export", "archive", "dashboard"}
+MEMORY_COMMANDS = {"hot", "context", "stats", "explain", "related", "query", "challenge", "compact", "promote", "export", "archive", "dashboard"}
 
 
 def should_skip(path: Path) -> bool:
@@ -78,7 +79,8 @@ def replace_managed_block(existing: str, start: str, end: str, block: str) -> st
         parts.append(block.rstrip())
         if suffix:
             parts.append(suffix)
-        return "\n\n".join(parts) + "\n"
+        result = "\n\n".join(parts)
+        return result if result.endswith("\n") else result + "\n"
     if existing.strip():
         return existing.rstrip() + "\n\n" + block
     return block

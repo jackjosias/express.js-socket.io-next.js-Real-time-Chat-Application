@@ -27,7 +27,7 @@ def main() -> int:
         print("  ./scribe doctor [SCRIBE_PATH] [--output REPORT] [--suggest-fix]")
         print("  ./scribe guard [SCRIBE_PATH] -- <command> [args...]")
         print("  ./scribe install [TARGET_PATH] [--force] [--dry-run]")
-        print("  ./scribe hot|stats|explain|related|query|challenge|compact|promote|export|archive|dashboard")
+        print("  ./scribe hot|context|stats|explain|related|query|challenge|compact|promote|export|archive|dashboard")
         print("  ./scribe graph [--build] [--query TEXT] [--budget N]")
         print("  ./scribe worktree [--strict]")
         return 0
@@ -40,15 +40,15 @@ def main() -> int:
         "graph": "scribe_bundle_graph.py",
         "worktree": "scribe_worktree.py",
     }
-    for memory_command in {"hot", "stats", "explain", "related", "query", "challenge", "compact", "promote", "export", "archive", "dashboard"}:
+    for memory_command in {"hot", "context", "stats", "explain", "related", "query", "challenge", "compact", "promote", "export", "archive", "dashboard"}:
         scripts[memory_command] = "scribe_memory.py"
     script = scripts.get(command)
     if script is None:
         print(f"Unknown scribe command: {command}", file=sys.stderr)
-        print("Available commands: doctor, guard, install, hot, stats, explain, related, query, challenge, compact, promote, export, archive, dashboard, graph, worktree", file=sys.stderr)
+        print("Available commands: doctor, guard, install, hot, context, stats, explain, related, query, challenge, compact, promote, export, archive, dashboard, graph, worktree", file=sys.stderr)
         return 2
 
-    if command in {"hot", "stats", "explain", "related", "query", "challenge", "compact", "promote", "export", "archive", "dashboard"}:
+    if command in {"hot", "context", "stats", "explain", "related", "query", "challenge", "compact", "promote", "export", "archive", "dashboard"}:
         sys.argv.insert(1, command)
     sys.path.insert(0, str(scripts_dir))
     runpy.run_path(str(scripts_dir / script), run_name="__main__")
@@ -161,6 +161,7 @@ Critical local rules:
 - Keep root `graphify-out/` focused on application code; SCRIBE/TENOR tooling is ignored by root `.graphifyignore`.
 - Use `./scribe graph --build` and `./scribe graph --query "..."` for a separate bundle graph.
 - Choose the smallest safe tier from `docs/friction-policy.md`; READ_ONLY skips doctor/SCRIBE writes, QUICK skips full ceremony unless risk escalates.
+- Prefer `./scribe context --mode quick|standard` for compact grounding instead of chaining multiple SCRIBE commands.
 - Use `./scribe doctor --suggest-fix` before and after editing `AGENT-MEMOIRE_PROJECT_STATUS.scribe`.
 - `./scribe query` searches only causal SCRIBE memory by default; Graphify remains responsible for structural code facts.
 - `./scribe worktree` separates generated noise from source changes before delivery.

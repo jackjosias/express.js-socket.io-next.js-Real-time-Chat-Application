@@ -38,6 +38,57 @@ class ScribeMemoryCommandTests(unittest.TestCase):
         self.assertIn("doctor: 0 error(s)", output)
         self.assertIn("graph: 4 causal edge(s)", output)
 
+    def test_hot_defaults_to_short_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_many_hot_fixture(Path(tmp))
+            code, output, error = self.run_cli("hot", "--scribe", str(path))
+
+        self.assertEqual(code, 0, error)
+        self.assertIn("SCRIBE HOT: 8/11", output)
+        self.assertIn("PAT-106 [patterns]", output)
+        self.assertNotIn("PAT-107 [patterns]", output)
+
+    def test_hot_defaults_to_recent_signal_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_ranked_hot_fixture(Path(tmp))
+            code, output, error = self.run_cli("hot", "--scribe", str(path), "--limit", "1")
+
+        self.assertEqual(code, 0, error)
+        self.assertIn("PAT-302 [patterns]", output)
+        self.assertNotIn("PAT-301 [patterns]", output)
+
+    def test_hot_topic_ranks_relevant_memory_first(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_ranked_hot_fixture(Path(tmp))
+            code, output, error = self.run_cli("hot", "--topic", "socket abuse", "--scribe", str(path), "--limit", "1")
+
+        self.assertEqual(code, 0, error)
+        self.assertIn("topic=socket abuse", output)
+        self.assertIn("PAT-301 [patterns]", output)
+        self.assertNotIn("PAT-302 [patterns]", output)
+
+    def test_context_quick_is_compact_and_skips_doctor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_many_hot_fixture(Path(tmp))
+            code, output, error = self.run_cli("context", "--mode", "quick", "--topic", "recherche causla", "--scribe", str(path))
+
+        self.assertEqual(code, 0, error)
+        self.assertIn("SCRIBE CONTEXT [quick]", output)
+        self.assertIn("doctor: skipped for quick mode", output)
+        self.assertIn("hot_by_topic: 5/11", output)
+        self.assertIn("topic: recherche causla", output)
+
+    def test_context_standard_includes_doctor_and_debts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_fixture(Path(tmp))
+            code, output, error = self.run_cli("context", "--mode", "standard", "--topic", "limiter", "--scribe", str(path))
+
+        self.assertEqual(code, 0, error)
+        self.assertIn("SCRIBE CONTEXT [standard]", output)
+        self.assertIn("doctor: 0 error(s)", output)
+        self.assertIn("active_debts: 1/1", output)
+        self.assertIn("DEBT-100 [debts]", output)
+
     def test_query_uses_local_scribe_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = write_fixture(Path(tmp))
@@ -210,6 +261,51 @@ def write_cold_fixture(directory: Path) -> Path:
 """
     content = SCRIBE_FIXTURE.replace('  cold: []', '  cold: ["PAT-200"]').replace("debts:\n", cold_pattern + "debts:\n")
     path = directory / "cold.scribe"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def write_many_hot_fixture(directory: Path) -> Path:
+    extra_ids = [f"PAT-{number}" for number in range(101, 110)]
+    hot_ids = ["VAC-100", "PAT-100", *extra_ids]
+    hot_line = "  hot: [" + ", ".join(f'"{entity_id}"' for entity_id in hot_ids) + "]"
+    extra_patterns = "".join(
+        f"""  - id: "{entity_id}"
+    tier: "hot"
+    status: "ACTIVE"
+    titre: "Hot context {entity_id}"
+    l0_abstract: "Synthetic hot memory for context limiting."
+"""
+        for entity_id in extra_ids
+    )
+    content = SCRIBE_FIXTURE.replace('  hot: ["VAC-100", "PAT-100"]', hot_line).replace("debts:\n", extra_patterns + "debts:\n")
+    path = directory / "many-hot.scribe"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def write_ranked_hot_fixture(directory: Path) -> Path:
+    hot_ids = ["VAC-100", "PAT-100", "PAT-301", "PAT-302"]
+    hot_line = "  hot: [" + ", ".join(f'"{entity_id}"' for entity_id in hot_ids) + "]"
+    extra_patterns = """  - id: "PAT-301"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-20"
+    titre: "Socket abuse guard"
+    l0_abstract: "Socket abuse payload validation memory."
+    liens_causaux:
+      source: "JOURNAL-301"
+  - id: "PAT-302"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    titre: "Recent context pack"
+    l0_abstract: "Recent context memory without socket terms."
+    liens_causaux:
+      source: "JOURNAL-302"
+"""
+    content = SCRIBE_FIXTURE.replace('  hot: ["VAC-100", "PAT-100"]', hot_line).replace("debts:\n", extra_patterns + "debts:\n")
+    path = directory / "ranked-hot.scribe"
     path.write_text(content, encoding="utf-8")
     return path
 

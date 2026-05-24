@@ -29,6 +29,7 @@ tiers:
     - "PAT-014"
     - "PAT-015"
     - "PAT-016"
+    - "PAT-017"
   warm:
     - "DEBT-001"
     - "GHOST-001"
@@ -575,6 +576,32 @@ patterns:
       verdict: "still_valid"
     status_log: []
     tier_log: []
+  - id: "PAT-017"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-035"
+      observable: "`./scribe context --mode quick|standard`, `./scribe hot`, py_compile, installer dry-run, and 24 bundle unit tests passed after adding compact context packs."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Single-command SCRIBE context packs"
+    l0_abstract: "Agents should use `./scribe context --mode quick|standard` for compact grounding instead of chaining hot, stats, query, and doctor."
+    pourquoi: "The individual SCRIBE commands are fast, but chaining them for routine work creates latency and attention loss. A single context pack keeps the safety signal while making QUICK skip full doctor and STANDARD include only the doctor summary, relevant topic hits, hot slice, and active debts."
+    contexte: "Friction-aware SCRIBE/TENOR agent workflow, local causal retrieval, and coding-agent startup context."
+    liens_causaux:
+      source: "JOURNAL-035"
+      renforce: ["PAT-007", "PAT-008", "PAT-009", "PAT-012", "PAT-016", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-035"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
 ghosts:
   - id: "GHOST-001"
     tier: "warm"
@@ -959,8 +986,22 @@ journal:
       - "both active Graphify Python installations patched in ~/.local and pipx"
       - "scribe doctor: 0 errors, 5 legacy warnings"
     scribe_delta: "VAC-004 | JOURNAL-034"
+  - id: "JOURNAL-035"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-007", "PAT-012", "PAT-016", "PAT-017", "VAC-005"]
+    l0_abstract: "Added compact SCRIBE context packs and capped default hot-memory output."
+    pourquoi: "The prior workflow was safe but could waste real agent time by chaining multiple memory commands for small tasks. `./scribe context --mode quick|standard` turns that into one bounded retrieval path: QUICK skips full doctor, STANDARD includes the doctor summary and active debts, and `./scribe hot` now defaults to a short slice."
+    validations:
+      - "py_compile: scribe memory, context, installer, template, root adapter, and shim compiled"
+      - "./scribe context --mode quick --topic friction workflow: compact context emitted with doctor skipped"
+      - "./scribe context --mode standard --topic friction workflow: context emitted with doctor 0 errors and active debt summary"
+      - "./scribe hot: default output capped to 8 of current hot entries"
+      - "./scribe install . --dry-run: all adapters unchanged"
+      - "unittest discover: 24 tests passed"
+    scribe_delta: "PAT-017 | JOURNAL-035"
 metrics:
-  sessions_total: 34
+  sessions_total: 35
   scars_total: 0
   vaccins_actifs: 5
   taux_recidive: 0.0
@@ -968,7 +1009,7 @@ metrics:
   complexite_moyenne: 0.0
   mode_distribution:
     CRITICAL: 11
-    STANDARD: 20
+    STANDARD: 21
     QUICK: 3
   dette_p0_p1_courante: 1
   dezoom_total: 0

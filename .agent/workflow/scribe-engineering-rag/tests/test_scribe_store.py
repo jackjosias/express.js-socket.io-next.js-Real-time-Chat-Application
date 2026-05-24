@@ -14,6 +14,9 @@ tokenize = getattr(scribe_store, "tokenize")
 scribe_bundle_graph = load_script_module("scribe_bundle_graph")
 should_skip_bundle_graph_path = getattr(scribe_bundle_graph, "should_skip_bundle_graph_path")
 
+scribe_install = load_script_module("scribe_install")
+replace_managed_block = getattr(scribe_install, "replace_managed_block")
+
 
 class ScribeStoreTests(unittest.TestCase):
     def test_load_scribe_builds_indexes_once(self) -> None:
@@ -73,6 +76,14 @@ class ScribeStoreTests(unittest.TestCase):
         self.assertTrue(should_skip_bundle_graph_path(Path("vendor/echarts/echarts.min.js")))
         self.assertTrue(should_skip_bundle_graph_path(Path("dashboard.min.js")))
         self.assertFalse(should_skip_bundle_graph_path(Path("scripts/scribe_search.py")))
+
+    def test_managed_block_update_is_idempotent_with_suffix_newline(self) -> None:
+        existing = "<start>\nold\n<end>\n\nsuffix\n"
+        block = "<start>\nnew\n<end>\n"
+
+        updated = replace_managed_block(existing, "<start>", "<end>", block)
+
+        self.assertEqual(updated, replace_managed_block(updated, "<start>", "<end>", block))
 
 
 if __name__ == "__main__":

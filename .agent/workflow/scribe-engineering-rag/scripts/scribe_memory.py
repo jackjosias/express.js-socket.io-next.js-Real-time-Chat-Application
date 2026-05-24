@@ -9,11 +9,13 @@ from scribe_doctor_checks import check_all
 from scribe_doctor_report import has_errors
 from scribe_memory_admin import VALID_TIERS, cmd_compact, cmd_export, cmd_promote
 from scribe_memory_archive import DEFAULT_ARCHIVE_PATH, cmd_archive
+from scribe_memory_context import cmd_context, ranked_hot_entities
 from scribe_memory_dashboard import DEFAULT_DASHBOARD_DATA_PATH, DEFAULT_DASHBOARD_PATH, cmd_dashboard
 from scribe_store import ScribeStore, compact_entity, entity_abstract, entity_title, load_scribe
 
 
 DEFAULT_LIMIT = 8
+DEFAULT_HOT_LIMIT = 8
 CHALLENGE_COLLECTIONS = {"scars", "vaccins", "patterns", "ghosts", "hypotheses", "debts", "dettes"}
 
 
@@ -45,8 +47,10 @@ def print_entity(entity, verbose: bool = False) -> None:
 
 def cmd_hot(args: argparse.Namespace) -> int:
     store = load_scribe(Path(args.scribe))
-    hot = store.hot_entities()[: args.limit]
-    print(f"SCRIBE HOT: {len(hot)} entrées affichées")
+    hot_entities = ranked_hot_entities(store, args.topic)
+    hot = hot_entities[: args.limit]
+    suffix = "" if not args.topic else f" topic={args.topic}"
+    print(f"SCRIBE HOT: {len(hot)}/{len(hot_entities)} entrées affichées{suffix}")
     for entity in hot:
         print()
         print_entity(entity)
@@ -185,8 +189,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     hot = subparsers.add_parser("hot", help="Print hot memory entries for immediate agent grounding.")
     add_common_args(hot)
-    hot.add_argument("--limit", type=int, default=30)
+    hot.add_argument("--limit", type=int, default=DEFAULT_HOT_LIMIT)
+    hot.add_argument("--topic", help="Rank hot memories by relevance to this topic before recency.")
     hot.set_defaults(func=cmd_hot)
+
+    context = subparsers.add_parser("context", help="Print a low-friction SCRIBE context pack for agents.")
+    add_common_args(context)
+    context.add_argument("--mode", default="quick", choices=("quick", "standard"))
+    context.add_argument("--topic", help="Optional focus query for relevant causal memory.")
+    context.add_argument("--limit", type=int, help="Override the hot memory limit for this context run.")
+    context.add_argument("--topic-limit", type=int, help="Override the focused topic result limit.")
+    context.set_defaults(func=cmd_context)
 
     stats = subparsers.add_parser("stats", help="Print SCRIBE health and memory statistics.")
     add_common_args(stats)

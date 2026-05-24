@@ -28,12 +28,13 @@ Agents must choose the lowest tier that satisfies the observed risk. Escalation 
 Hard skips:
 
 - `READ_ONLY`: do not run doctor, do not write SCRIBE, and do not build a bundle graph unless the question is about bundle architecture.
-- `QUICK`: use `./scribe query` or `./scribe challenge` only when memory is relevant; run focused validation; skip journal unless a durable lesson was learned.
+- `QUICK`: prefer `./scribe context --mode quick --topic "<work>"` or `./scribe hot --topic "<work>"` when memory is relevant; run focused validation; skip journal unless a durable lesson was learned.
 - Escalate only when the blast radius grows, validation fails, or a hot scar/vaccin directly applies.
 
 ## Guardrails
 
 - Prefer `./scribe challenge "<plan>"` over manually rereading the full SCRIBE.
+- Prefer `./scribe context --mode quick|standard` over chaining `hot`, `stats`, `query`, and `doctor` for routine grounding.
 - Prefer `./scribe worktree` before delivery to separate source changes from generated noise.
 - Use `./scribe graph --build` only when the bundle architecture matters.
 - Do not run doctor for pure read-only answers.

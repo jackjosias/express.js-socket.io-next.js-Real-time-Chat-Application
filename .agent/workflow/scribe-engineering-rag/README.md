@@ -32,8 +32,10 @@ Current CLI baseline:
 - `./scribe install [TARGET_PATH] [--force] [--dry-run]`
   - Installs this bundle into another project with root adapters for `scribe`,
     `AGENTS.md`, `.graphifyignore`, and Python import compatibility shims.
-- `./scribe hot [--limit N]`
-  - Prints hot memory entries for immediate agent grounding.
+- `./scribe hot [--limit N] [--topic TEXT]`
+  - Prints a short hot-memory slice for immediate agent grounding; default output is recency-ranked and intentionally capped.
+- `./scribe context [--mode quick|standard] [--topic TEXT]`
+  - Prints a low-friction context pack: quick skips full doctor, standard includes doctor summary and active debts.
 - `./scribe stats`
   - Prints SCRIBE health, tier counts, entity counts, and causal edge counts.
 - `./scribe explain <ID>`
