@@ -16,20 +16,25 @@ Rules:
 
 ## Graphify hook compatibility
 
-Resolved on 2026-05-23: `PreToolUse hook returned unsupported additionalContext` came from the Graphify hook template, not from SCRIBE or the application.
+Resolved failure modes:
+- 2026-05-23: `PreToolUse hook returned unsupported additionalContext` came from the Graphify hook template, not from SCRIBE or the application.
+- 2026-05-24: `failed to write hook stdin: Broken pipe (os error 32)` came from a silent hook command that exited before reading the Codex JSON payload.
 
 What happened:
 - The generated `.codex/hooks.json` hook emitted `hookSpecificOutput.additionalContext`.
 - The current runtime rejects `additionalContext` in `PreToolUse` hook output.
-- The active project hook now stays silent and only keeps a `graphify hook` marker so reinstall/uninstall can identify it.
+- Codex writes the PreToolUse payload to hook stdin; a command that exits immediately can trigger a broken pipe even when it returns success.
+- The active project hook consumes stdin, stays silent, and keeps a `graphify hook` marker so reinstall/uninstall can identify it.
 - Patch every active Graphify installation if a reinstall can recreate the bad hook.
-- Also sanitize global Gemini/Antigravity trusted hook registries if they contain old Graphify commands with `additionalContext`; valid commands should return only `{"decision":"allow"}`.
+- Also sanitize global Gemini/Antigravity trusted hook registries if they contain old Graphify commands with `additionalContext`; valid Gemini commands should return only JSON allow decisions.
 
 Rules:
 - Never reintroduce `additionalContext` or `hookSpecificOutput` in project PreToolUse hooks.
-- If Graphify is upgraded or reinstalled, rerun `graphify codex install` and verify active hook files plus active Graphify installations with `rg "additionalContext|hookSpecificOutput"`.
-- A valid Codex hook command for this project is `: graphify hook; [ ! -f graphify-out/graph.json ] || true`.
-- A valid Gemini trusted hook command is `: graphify hook; echo '{"decision":"allow"}'`.
+- Never use a Codex PreToolUse command that exits without consuming stdin.
+- If Graphify is upgraded or reinstalled, rerun `graphify codex install` and verify active hook files plus active Graphify installations for unsupported fields and legacy stdin-broken commands.
+- A valid Codex hook command for this project is `python3 -c "import sys; sys.stdin.read()" # graphify hook`.
+- A valid Gemini trusted hook command is `: graphify hook; printf "%s\n" "{\"decision\":\"allow\"}"`.
+- A local hook simulation must exit 0 with empty stdout/stderr when fed a representative JSON payload.
 
 ## SCRIBE doctor guard
 

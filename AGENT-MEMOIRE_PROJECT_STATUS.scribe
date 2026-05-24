@@ -139,16 +139,16 @@ vaccins:
     human_validated: false
     validated_by_session: null
     titre: "Graphify PreToolUse schema compatibility"
-    l0_abstract: "Graphify-generated PreToolUse hooks must never emit `additionalContext` or `hookSpecificOutput` for this runtime."
-    virus: "Reinstalling Graphify from any unpatched installation or leaving global trusted hooks stale recreates `PreToolUse hook returned unsupported additionalContext`."
-    antidote: "Keep hooks silent with a `graphify hook` marker, patch every Graphify installation, sanitize global trusted hooks, rerun `graphify codex install`, and verify no executable hook source contains `additionalContext` or `hookSpecificOutput`."
+    l0_abstract: "Graphify-generated PreToolUse hooks must never emit unsupported fields and must consume stdin before exiting."
+    virus: "Reinstalling Graphify from any unpatched installation, leaving global trusted hooks stale, or using a hook command that exits without reading stdin recreates PreToolUse failures."
+    antidote: "Use a stdin-consuming Codex hook command (`python3 -c \"import sys; sys.stdin.read()\" # graphify hook`), patch every Graphify installation, sanitize global trusted hooks, rerun `graphify codex install`, and verify no executable hook source contains `additionalContext`, `hookSpecificOutput`, or the stdin-broken legacy command."
     contexte: "Graphify Codex/Gemini hook generation, project hook compatibility, and global trusted hook registries."
     liens_causaux:
       complements: ["PAT-001", "PAT-002", "PAT-003", "PAT-004"]
       prevenu_par: ["JOURNAL-016"]
     validite:
-      derniere_verif: "2026-05-23"
-      verifie_par: "JOURNAL-016"
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-034"
       verdict: "still_valid"
     status_log: []
     tier_log: []
@@ -947,8 +947,20 @@ journal:
       - "scribe query friciton perfermance: typo query returned friction memory"
       - "scribe doctor: 0 errors, 5 legacy warnings"
     scribe_delta: "PAT-016 | JOURNAL-033"
+  - id: "JOURNAL-034"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-004", "PAT-002", "PAT-012"]
+    l0_abstract: "Fixed the Codex PreToolUse hook broken-pipe failure by making Graphify hooks consume stdin."
+    pourquoi: "Codex writes a JSON payload to PreToolUse hook stdin; the old silent Graphify command exited immediately, so the runtime hit Broken pipe before the hook could complete. Consuming stdin preserves silent allow behavior while keeping the graphify marker and preventing reinstall from recreating the bad command."
+    validations:
+      - "project .codex/hooks.json command consumes stdin and exits 0 in a local simulation"
+      - "graphify codex install regenerated the stdin-safe hook from the patched template"
+      - "both active Graphify Python installations patched in ~/.local and pipx"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+    scribe_delta: "VAC-004 | JOURNAL-034"
 metrics:
-  sessions_total: 33
+  sessions_total: 34
   scars_total: 0
   vaccins_actifs: 5
   taux_recidive: 0.0
@@ -956,7 +968,7 @@ metrics:
   complexite_moyenne: 0.0
   mode_distribution:
     CRITICAL: 11
-    STANDARD: 19
+    STANDARD: 20
     QUICK: 3
   dette_p0_p1_courante: 1
   dezoom_total: 0
@@ -965,5 +977,5 @@ metrics:
   torvalds_items_traites: 0
   taux_completion_prod_moyenne: 0.0
   delta_feuille_vs_prod_moyen: 0.0
-  graphify_queries_total: 12
-  tokens_saved_via_graphify: 69300
+  graphify_queries_total: 13
+  tokens_saved_via_graphify: 70000
