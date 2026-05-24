@@ -11,6 +11,9 @@ scribe_store = load_script_module("scribe_store")
 load_scribe = getattr(scribe_store, "load_scribe")
 tokenize = getattr(scribe_store, "tokenize")
 
+scribe_bundle_graph = load_script_module("scribe_bundle_graph")
+should_skip_bundle_graph_path = getattr(scribe_bundle_graph, "should_skip_bundle_graph_path")
+
 
 class ScribeStoreTests(unittest.TestCase):
     def test_load_scribe_builds_indexes_once(self) -> None:
@@ -54,8 +57,22 @@ class ScribeStoreTests(unittest.TestCase):
         self.assertTrue(results)
         self.assertEqual(results[0][1].entity.id, "PAT-100")
 
+    def test_search_tolerates_french_typos(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = load_scribe(write_fixture(Path(tmp)))
+
+        results = store.search("rechreche causla", limit=2)
+
+        self.assertTrue(results)
+        self.assertEqual(results[0][1].entity.id, "PAT-100")
+
     def test_tokenize_keeps_ids_and_long_terms(self) -> None:
         self.assertEqual(tokenize("VAC-100 Pyrefly IO"), {"vac-100", "pyrefly"})
+
+    def test_bundle_graph_skips_vendor_and_minified_assets(self) -> None:
+        self.assertTrue(should_skip_bundle_graph_path(Path("vendor/echarts/echarts.min.js")))
+        self.assertTrue(should_skip_bundle_graph_path(Path("dashboard.min.js")))
+        self.assertFalse(should_skip_bundle_graph_path(Path("scripts/scribe_search.py")))
 
 
 if __name__ == "__main__":

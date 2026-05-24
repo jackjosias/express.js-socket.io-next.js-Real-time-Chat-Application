@@ -33,7 +33,7 @@ Rules:
 
 ## SCRIBE doctor guard
 
-Use `docs/friction-policy.md` to choose the smallest safe workflow tier. Do not run full SCRIBE ceremony for read-only answers or trivial low-risk fixes.
+Use `docs/friction-policy.md` to choose the smallest safe workflow tier automatically. READ_ONLY must skip doctor and SCRIBE writes; QUICK must run only focused retrieval/validation unless risk escalates. Do not run full SCRIBE ceremony for read-only answers or trivial low-risk fixes.
 
 Every future evolution of `AGENT-MEMOIRE_PROJECT_STATUS.scribe` is guarded:
 

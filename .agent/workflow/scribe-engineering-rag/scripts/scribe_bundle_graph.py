@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import shutil
 import subprocess
 import tempfile
@@ -11,11 +12,22 @@ from pathlib import Path
 BUNDLE_ROOT = Path(__file__).resolve().parents[1]
 BUNDLE_GRAPH_DIR = BUNDLE_ROOT / "graphify-out"
 DEFAULT_BUDGET = 1200
+GRAPH_SKIP_DIRS = {"graphify-out", "__pycache__", ".pytest_cache", ".mypy_cache", "vendor"}
+GRAPH_SKIP_PATTERNS = {"*.pyc", "*.pyo", "*.min.js", "*.min.css", "*.map"}
+
+
+def should_skip_bundle_graph_path(path: Path) -> bool:
+    return any(part in GRAPH_SKIP_DIRS for part in path.parts) or any(
+        fnmatch.fnmatch(path.name, pattern) for pattern in GRAPH_SKIP_PATTERNS
+    )
+
+
+def bundle_graph_ignore(_directory: str, names: list[str]) -> set[str]:
+    return {name for name in names if should_skip_bundle_graph_path(Path(name))}
 
 
 def copy_bundle_without_graph(target: Path) -> None:
-    ignore = shutil.ignore_patterns("graphify-out", "__pycache__", ".pytest_cache", "*.pyc", "*.pyo")
-    shutil.copytree(BUNDLE_ROOT, target, ignore=ignore)
+    shutil.copytree(BUNDLE_ROOT, target, ignore=bundle_graph_ignore)
 
 
 def run_graphify_update(target: Path) -> subprocess.CompletedProcess[str]:

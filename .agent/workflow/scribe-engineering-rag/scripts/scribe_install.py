@@ -44,6 +44,7 @@ SHIM_MODULES = (
     "scribe_doctor_model",
     "scribe_doctor_report",
     "scribe_dashboard_assets",
+    "scribe_dashboard_view",
 )
 CLI_SHIM_MODULES = {"scribe_bundle_graph", "scribe_doctor", "scribe_guard", "scribe_install", "scribe_memory", "scribe_worktree"}
 MEMORY_COMMANDS = {"hot", "stats", "explain", "related", "query", "challenge", "compact", "promote", "export", "archive", "dashboard"}
