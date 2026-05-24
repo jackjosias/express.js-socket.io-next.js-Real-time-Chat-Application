@@ -1,0 +1,927 @@
+schema_version: "TENOR_SCRIBE_v1"
+project: "JJK Messenger"
+last_update: "2026-05-23"
+created_at: "2026-05-20"
+template_source: "missing:.agent/workflows/scribe.md"
+notes:
+  - "SCRIBE initialized because AGENT-MEMOIRE_PROJECT_STATUS.scribe was absent and the official template was not present in this workspace."
+  - "Only causal memory belongs here; structural facts belong to Graphify when graphify-out is available."
+tiers:
+  hot:
+    - "VAC-001"
+    - "VAC-002"
+    - "VAC-003"
+    - "VAC-004"
+    - "VAC-005"
+    - "PAT-001"
+    - "PAT-002"
+    - "PAT-003"
+    - "PAT-004"
+    - "PAT-005"
+    - "PAT-006"
+    - "PAT-007"
+    - "PAT-008"
+    - "PAT-009"
+    - "PAT-010"
+    - "PAT-011"
+    - "PAT-012"
+    - "PAT-013"
+    - "PAT-014"
+    - "PAT-015"
+  warm:
+    - "DEBT-001"
+    - "GHOST-001"
+  cold: []
+invariants:
+  - id: "INV-F001"
+    status: "active"
+    l0_abstract: "Maintain senior production engineering posture across the session."
+  - id: "INV-F002"
+    status: "active"
+    l0_abstract: "Never hardcode secrets; use environment configuration."
+  - id: "INV-F003"
+    status: "active"
+    l0_abstract: "Preserve existing behavior; avoid regressions."
+  - id: "INV-F004"
+    status: "active"
+    l0_abstract: "Deliver complete code without placeholders."
+  - id: "INV-F005"
+    status: "active"
+    l0_abstract: "Explain to the user in French; keep code identifiers and comments in English."
+  - id: "INV-F006"
+    status: "active"
+    l0_abstract: "Consult SCRIBE before code changes."
+  - id: "INV-F007"
+    status: "active"
+    l0_abstract: "Require human validation before irreversible actions."
+  - id: "INV-F008"
+    status: "active"
+    l0_abstract: "Bind critical or high scars to tests."
+  - id: "INV-F009"
+    status: "active"
+    l0_abstract: "Update SCRIBE incrementally; never overwrite historical memory."
+  - id: "INV-F010"
+    status: "active"
+    l0_abstract: "Read Graphify report first when graphify-out is present."
+scars: []
+vaccins:
+  - id: "VAC-001"
+    titre: "Next 16 lint CLI"
+    l0_abstract: "After upgrading to Next.js 16, keep linting on ESLint CLI with native flat config; never keep `next lint`."
+    virus: "Leaving `next lint` or FlatCompat-based Next extends after Next 16 creates broken lint workflows."
+    antidote: "Use `eslint .` and import `eslint-config-next/core-web-vitals` plus `eslint-config-next/typescript` directly in `eslint.config.mjs`."
+    contexte: "Frontend upgrades to Next.js 16."
+  - id: "VAC-002"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    source: "JOURNAL-007"
+    scope: "security"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-007"
+      observable: "WebSocket sendMessage accepted unknown payloads and logged message content before the hardening patch."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "WebSocket input validation and PII-safe logs"
+    l0_abstract: "All Socket.IO client payloads must be validated server-side and message content must never be logged in clear text."
+    virus: "Trusting socket event payload shape or logging chat message content creates input abuse and PII leakage risk."
+    antidote: "Parse unknown socket payloads defensively, reject invalid values, and log only metadata such as user IDs and content length."
+    contexte: "Backend Socket.IO message ingestion."
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-007"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-003"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    source: "JOURNAL-009"
+    scope: "security"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-009"
+      observable: "Auth register/login routes were public and had no request throttling before the hardening patch."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Auth endpoint rate limiting"
+    l0_abstract: "Public auth endpoints must rate limit attempts before validation and controller execution."
+    virus: "Leaving login/register unlimited makes brute-force and account abuse cheap."
+    antidote: "Apply request rate limiting before validation/controllers on auth routes, and preserve a 429 Retry-After response."
+    contexte: "Backend auth boundary."
+    liens_causaux:
+      complements: ["VAC-002"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-009"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-004"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    source: "JOURNAL-016"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-016"
+      observable: "Graphify generators and the global Gemini trusted hook registry emitted unsupported `additionalContext` until patched."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Graphify PreToolUse schema compatibility"
+    l0_abstract: "Graphify-generated PreToolUse hooks must never emit `additionalContext` or `hookSpecificOutput` for this runtime."
+    virus: "Reinstalling Graphify from any unpatched installation or leaving global trusted hooks stale recreates `PreToolUse hook returned unsupported additionalContext`."
+    antidote: "Keep hooks silent with a `graphify hook` marker, patch every Graphify installation, sanitize global trusted hooks, rerun `graphify codex install`, and verify no executable hook source contains `additionalContext` or `hookSpecificOutput`."
+    contexte: "Graphify Codex/Gemini hook generation, project hook compatibility, and global trusted hook registries."
+    liens_causaux:
+      complements: ["PAT-001", "PAT-002", "PAT-003", "PAT-004"]
+      prevenu_par: ["JOURNAL-016"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-016"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-005"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    source: "JOURNAL-021"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-021"
+      observable: "Pyrefly reported missing imports after SCRIBE scripts moved out of repository-root `scripts/` into the bundle."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Root script shims after bundle moves"
+    l0_abstract: "When SCRIBE tooling moves into the bundle, keep repository-root `scripts/*.py` shims for static analyzers and legacy imports."
+    virus: "Removing the root script path entirely after a bundle migration makes editors and type checkers report missing imports even when `./scribe` still works."
+    antidote: "Keep root `scripts/` as shim-only adapters that re-export the canonical bundle modules, ignore that directory in Graphify, and teach `scribe install` to recreate the shims idempotently."
+    contexte: "SCRIBE/TENOR bundle migration, Pyrefly diagnostics, and cross-project installer behavior."
+    liens_causaux:
+      renforce: ["PAT-005", "PAT-006"]
+      prevenu_par: ["JOURNAL-021"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-021"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+patterns:
+  - id: "PAT-001"
+    titre: "Canonical Graphify Root"
+    l0_abstract: "Keep the canonical Graphify graph at repository root `graphify-out/` so Codex hooks and AGENTS.md resolve it automatically."
+    contexte: "Graphify installation for this project."
+    pourquoi: "A subfolder graph can be valid for manual reading, but Codex hooks installed by `graphify codex install` check root `graphify-out/`; duplicating graphs creates stale-memory risk."
+  - id: "PAT-002"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-008"
+      observable: "After adding scribe doctor tooling, Graphify promoted tooling nodes above app nodes until .graphifyignore excluded SCRIBE/TENOR files."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Graphify app/tooling scope separation"
+    l0_abstract: "Keep root graphify-out focused on the jjk-messenger app; exclude SCRIBE/TENOR tooling and prefix app queries with APP_SCOPE."
+    pourquoi: "The app graph loses architectural signal when agent tooling becomes top-ranked god nodes; filtering tooling preserves app navigation while direct file inspection remains available for SCRIBE code."
+    contexte: "Graphify root graph and future codebase queries."
+    liens_causaux:
+      source: "JOURNAL-008"
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-008"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-003"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-011"
+      observable: "A controlled crash-test proved scribe doctor fails closed on corruptions while the canonical SCRIBE remains clean."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Doctor guard around SCRIBE evolution"
+    l0_abstract: "Every SCRIBE evolution must run scribe doctor before and after the memory delta."
+    pourquoi: "The crash-test proved doctor catches duplicate IDs, missing V3.2 fields, broken links, and unlogged status mutations; making it a pre/post guard prevents silent memory corruption."
+    contexte: "TENOR/SCRIBE workflow updates and all future causal memory writes."
+    liens_causaux:
+      source: "JOURNAL-011"
+      renforce: ["JOURNAL-010"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-011"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-004"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-015"
+      observable: "`./scribe doctor --suggest-fix` and `./scribe guard -- test -f scribe` generated their Markdown reports in scribe-out."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "SCRIBE report output directory"
+    l0_abstract: "All generated SCRIBE doctor Markdown reports must go under `scribe-out/` by default."
+    pourquoi: "Doctor reports are generated artifacts; placing them at repository root creates noise and hides source files, while `scribe-out/` keeps the audit trail visible and contained."
+    contexte: "SCRIBE doctor CLI, guard wrapper, and future TENOR workflow updates."
+    liens_causaux:
+      source: "JOURNAL-015"
+      renforce: ["JOURNAL-014", "PAT-003"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-015"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-005"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-018"
+      observable: "`./scribe doctor`, `./scribe guard`, and Python compile checks passed after moving SCRIBE tooling into the engineering bundle."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Importable SCRIBE engineering bundle"
+    l0_abstract: "Keep reusable SCRIBE/TENOR assets under `.agent/workflow/scribe-engineering-rag/` and preserve root behavior with small adapters."
+    pourquoi: "A raw move would break agent bootstrap, Graphify ignore behavior, and the stable `./scribe` entrypoint; adapters let the bundle be portable while existing tools keep working."
+    contexte: "Project cleanup, reusable agent tooling, and cross-project SCRIBE migration."
+    liens_causaux:
+      source: "JOURNAL-018"
+      renforce: ["PAT-003", "PAT-004"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-018"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-006"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-019"
+      observable: "`./scribe install` installed the bundle into `/tmp/scribe-install-check`; a second dry-run from the installed wrapper reported all root adapters unchanged."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Idempotent SCRIBE bundle installer"
+    l0_abstract: "Portable SCRIBE/TENOR installs must be idempotent, skip generated Python artifacts, and update root adapters through managed blocks."
+    pourquoi: "Cross-project import is only safe if repeated installs converge without duplicating AGENTS/.graphifyignore content or copying cache files; managed blocks and conflict checks make the installer reversible and predictable."
+    contexte: "SCRIBE bundle installation into new repositories."
+    liens_causaux:
+      source: "JOURNAL-019"
+      renforce: ["PAT-005", "VAC-004"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-019"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-007"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-022"
+      observable: "`./scribe hot`, `stats`, `explain`, `related`, `query`, and `challenge` passed against the canonical SCRIBE without calling Graphify."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Deterministic local SCRIBE retrieval commands"
+    l0_abstract: "SCRIBE retrieval commands must use one local parse/index pipeline and never call Graphify by default."
+    pourquoi: "The SCRIBE is causal/RL memory, while Graphify is structural code memory; keeping the first V1 deterministic, local, and dependency-light makes it safe for long-term agent grounding and cross-project reuse."
+    contexte: "SCRIBE hot/stats/explain/related/query/challenge CLI design."
+    liens_causaux:
+      source: "JOURNAL-022"
+      renforce: ["PAT-003", "PAT-004", "PAT-005", "PAT-006", "PAT-010", "VAC-004", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-022"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-008"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-023"
+      observable: "The SCRIBE bundle was reorganized into docs/scripts/templates/tests; 7 unit tests, Pyrefly, py_compile, and installer dry-run passed."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Structured tested SCRIBE bundle"
+    l0_abstract: "Reusable SCRIBE bundles must separate docs, scripts, templates, and tests while keeping root adapters idempotent and cache-free."
+    pourquoi: "A flat bundle makes documentation, generated policy, implementation, and validation artifacts compete at the same level; a stable folder contract plus targeted tests makes cross-project import cleaner and prevents cache files from leaking back into the bundle."
+    contexte: "SCRIBE/TENOR bundle structure, unit testing, Pyrefly hygiene, and portable installer behavior."
+    liens_causaux:
+      source: "JOURNAL-023"
+      renforce: ["PAT-003", "PAT-005", "PAT-006", "PAT-007", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-023"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-009"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-024"
+      observable: "`./scribe compact`, `promote`, and `export` passed through unit tests and root adapter checks without introducing SCRIBE doctor errors."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Safe SCRIBE memory maintenance commands"
+    l0_abstract: "Maintenance commands that can touch SCRIBE state must patch narrowly, validate with doctor, and expose dry-run/report modes."
+    pourquoi: "Memory maintenance is higher risk than read-only retrieval: compaction and tier promotion can corrupt long-term agent grounding if they rewrite the YAML wholesale. Targeted text patches plus doctor rollback preserve historical memory while making the SCRIBE operable at scale."
+    contexte: "SCRIBE compact/promote/export command design and long-term causal memory operations."
+    liens_causaux:
+      source: "JOURNAL-024"
+      renforce: ["PAT-003", "PAT-006", "PAT-007", "PAT-008", "VAC-004", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-024"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-010"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-026"
+      observable: "`./scribe archive` dry-run, unit archive apply fixture, doctor, Pyrefly, py_compile, and install dry-run passed after the archive implementation."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Dry-run guarded SCRIBE archival"
+    l0_abstract: "SCRIBE archival must default to dry-run, skip active debts, write archive YAML only with `--apply`, and rollback on doctor failure."
+    pourquoi: "Archival removes entries from active memory, so it is more dangerous than export; dry-run by default, active-debt skips, archive YAML validation, and doctor rollback make the operation reversible and suitable for long-term memory hygiene."
+    contexte: "SCRIBE archive command, cold-tier retention, and active memory pruning."
+    liens_causaux:
+      source: "JOURNAL-026"
+      renforce: ["GHOST-001", "PAT-003", "PAT-008", "PAT-009", "VAC-004", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-026"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-011"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-027"
+      observable: "`./scribe dashboard` generated static HTML and JSON data from the SCRIBE export payload; tests, Pyrefly, py_compile, install dry-run, doctor, archive dry-run, and Graphify update passed."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Static SCRIBE dashboard from export payload"
+    l0_abstract: "SCRIBE dashboards must be generated from the same deterministic export payload as `./scribe export`, with no server or external assets in V1."
+    pourquoi: "The dashboard is an observability layer, not a new memory source; using the export payload keeps display logic downstream of validated causal memory and avoids coupling dashboard generation to Graphify or a web server."
+    contexte: "SCRIBE dashboard command, local observability, and export-based memory visualization."
+    liens_causaux:
+      source: "JOURNAL-027"
+      renforce: ["GHOST-001", "PAT-007", "PAT-009", "PAT-010", "VAC-004", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-027"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-012"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-028"
+      observable: "`docs/friction-policy.md`, `./scribe graph`, `./scribe worktree`, and the split `scribe_search.py` passed tests while preserving the long SCRIBE protocol."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Friction-aware SCRIBE agent workflow"
+    l0_abstract: "Agents must choose the smallest safe SCRIBE/TENOR workflow tier and keep bundle graphing separate from the app graph."
+    pourquoi: "The heavy protocol protects critical work, but applying every ritual to small fixes wastes agent attention; a documented fast path plus bundle graph and worktree classifier keeps safety where it matters without polluting the app graph or hiding repo dirt."
+    contexte: "SCRIBE/TENOR bundle, agent coding workflow, Graphify scope separation, and worktree hygiene."
+    liens_causaux:
+      source: "JOURNAL-028"
+      renforce: ["PAT-002", "PAT-007", "PAT-008", "PAT-009", "PAT-011", "VAC-004", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-23"
+      verifie_par: "JOURNAL-028"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-013"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-029"
+      observable: "`./scribe dashboard` generated an improved static UI with embedded search/filter/sort controls; desktop and mobile Chromium screenshots rendered without visible layout overlap."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Operable static SCRIBE dashboard UX"
+    l0_abstract: "A static SCRIBE dashboard should be immediately operable: searchable, filterable, responsive, and still free of server or external asset dependencies."
+    pourquoi: "The first dashboard proved the export-based architecture; the next bottleneck was usability. Embedding local controls over pre-rendered memory cards keeps the dashboard portable while making causal memory inspectable without a web app stack."
+    contexte: "SCRIBE dashboard UI/UX, local observability, and portable HTML generation."
+    liens_causaux:
+      source: "JOURNAL-029"
+      renforce: ["PAT-007", "PAT-011", "PAT-012", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-029"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-014"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-030"
+      observable: "`./scribe dashboard` now embeds a vendored local ECharts runtime and renders tier, collection, and risk charts without external network assets."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Local ECharts analytics for static dashboards"
+    l0_abstract: "Static SCRIBE dashboards may use ECharts only when the runtime is vendored locally and the generated HTML stays independent from CDN/network access."
+    pourquoi: "The dashboard needed richer statistics without losing portability; vendoring and inlining ECharts gives real charting while preserving the offline, export-derived, no-server contract from the dashboard patterns."
+    contexte: "SCRIBE dashboard analytics, local vendor assets, and offline HTML report generation."
+    liens_causaux:
+      source: "JOURNAL-030"
+      renforce: ["PAT-007", "PAT-011", "PAT-013", "VAC-004", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-030"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-015"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-031"
+      observable: "Restoring `.gitignore`, ignoring generated/runtime artifacts, and staging source changes reduced `./scribe worktree` to 0 untracked source, 0 generated noise, and 0 other untracked."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Worktree triage before commit"
+    l0_abstract: "Clean dirty repos by ignoring generated/runtime artifacts first, then staging intentional source changes without auto-reverting ambiguous deletions."
+    pourquoi: "A dirty worktree with tracked deletions and many untracked files is not fixed by blind cleanup: generated noise must be hidden by ignore policy, secrets must stay ignored, and source changes should become a reviewable staged diff while destructive revert/remove decisions remain explicit."
+    contexte: "Git hygiene for SCRIBE/TENOR bundle changes and JJK Messenger source migration."
+    liens_causaux:
+      source: "JOURNAL-031"
+      renforce: ["PAT-003", "PAT-012", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-031"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+ghosts:
+  - id: "GHOST-001"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    titre: "Archive before dashboard"
+    l0_abstract: "Implement `scribe archive` before `scribe dashboard` so memory lifecycle rules exist before visualization."
+    l2_details: >
+      Dashboard is useful for observability, but it should consume stable lifecycle semantics rather than invent them.
+      Archive is the lower-level primitive: it can move cold entries out of the hot operational path, preserve causality,
+      and keep future dashboard views smaller, faster, and less misleading.
+    alternatives_rejetees:
+      - nom: "scribe dashboard first"
+        raison_rejet: "A dashboard before archive would visualize a growing YAML without solving retention, cold storage, or signal/noise pressure."
+    evidence:
+      type: "REASONED"
+      source: "JOURNAL-025"
+      observable: "`compact/promote/export` are validated; the next missing lifecycle primitive is archival, not presentation."
+    liens_causaux:
+      source: "JOURNAL-025"
+      renforce: ["PAT-007", "PAT-008", "PAT-009"]
+hypotheses: []
+lessons: []
+debts:
+  - id: "DEBT-001"
+    tier: "warm"
+    status: "ACTIVE"
+    titre: "Process-local auth rate limiter"
+    date_creation: "2026-05-23"
+    schema_patch_date: "2026-05-23"
+    type: "CHOISIE"
+    severite: "HIGH"
+    l0_abstract: "The auth limiter is intentionally process-local; replace it with shared enforcement before horizontal scaling."
+    l2_details: >
+      This session chose an in-memory limiter to harden the current single-process app without adding infrastructure.
+      In multi-instance production, each process would keep separate counters, so enforcement must move to Redis,
+      an API gateway, or a WAF before horizontal scaling.
+    plan_remboursement: "Before multi-instance production, replace the in-memory store with Redis/gateway/WAF rate limiting and configure proxy trust deliberately."
+mutations: []
+journal:
+  - id: "JOURNAL-001"
+    date: "2026-05-20"
+    mode: "STANDARD"
+    l0_abstract: "Initialized TENOR session memory after confirming the project SCRIBE and template were absent."
+    pourquoi: "The user requested TENOR initialization and last_update synchronization; creating a minimal YAML memory prevents future sessions from starting without causal memory."
+  - id: "JOURNAL-002"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    l0_abstract: "Updated framework dependencies to current stable versions and repaired the lint/build path exposed by Next.js 16."
+    pourquoi: "The dependency upgrade was not just a version bump: Next.js 16 removes `next lint`, so keeping the old lint command would make the project look upgraded while leaving validation broken."
+  - id: "JOURNAL-003"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    l0_abstract: "Installed Graphify for Codex and generated the canonical root knowledge graph."
+    pourquoi: "The project needed persistent structural memory aligned with Codex hooks; keeping the graph at root prevents future agents from missing it or reading a stale subfolder graph."
+  - id: "JOURNAL-004"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    l0_abstract: "Implemented a read-only scribe doctor CLI with a Markdown report output."
+    pourquoi: "The SCRIBE now needs mechanical validation before V3.2 migration work; keeping doctor read-only prevents tooling from silently rewriting historical memory."
+  - id: "JOURNAL-005"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    l0_abstract: "Validated the existing SCRIBE with doctor: zero blocking ERRORs, five legacy WARNINGs intentionally kept."
+    pourquoi: "The V3.2 roadmap forbids retroactive cleanup of old warnings during migration; documenting W001/W002/W009 preserves historical integrity while proving the SCRIBE is structurally safe."
+    migration_warnings:
+      errors_blocking: 0
+      warnings_total: 5
+      kept_as_legacy:
+        - "W001: PAT-001 and VAC-001 pre-V3.2 missing scope."
+        - "W002: PAT-001 and VAC-001 pre-V3.2 missing evidence.type."
+        - "W009: legacy entries pre-V3.2 missing schema_patch_date."
+  - id: "JOURNAL-006"
+    date: "2026-05-23"
+    mode: "QUICK"
+    l0_abstract: "Engraved the full seven-step operational loop into the V3.2 scribe workflow template."
+    pourquoi: "The prior wording could make agents treat scribe doctor as the last memory step; the template now states explicitly that every real task must write the causal SCRIBE delta before the final doctor check."
+  - id: "JOURNAL-007"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-001", "PAT-001"]
+    l0_abstract: "Hardened Socket.IO sendMessage ingestion with server-side validation and PII-safe logging."
+    pourquoi: "WebSocket events bypass Express/Zod middleware, so the same production input-trust risk exists unless the socket boundary validates unknown payloads itself; logging only metadata prevents chat content exposure in debug logs."
+    scribe_delta: "VAC-002"
+  - id: "JOURNAL-008"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-001", "VAC-002"]
+    l0_abstract: "Separated Graphify app scope from SCRIBE/TENOR tooling with .graphifyignore and an APP_SCOPE query convention."
+    pourquoi: "The canonical root graph must guide application architecture; after tooling nodes polluted god-node rankings, excluding process tooling restored app-first navigation without deleting the tooling itself."
+    scribe_delta: "PAT-002"
+  - id: "JOURNAL-009"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-002", "PAT-002"]
+    l0_abstract: "Added request throttling to public auth attempts before validation and controller execution."
+    pourquoi: "Login and registration are public abuse targets; limiting attempts at the route boundary reduces brute-force pressure while keeping validation and business logic unchanged."
+    scribe_delta: "VAC-003 | DEBT-001"
+  - id: "JOURNAL-010"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-002", "VAC-003"]
+    l0_abstract: "Validated scribe doctor with a controlled corruption crash-test on an isolated copy."
+    pourquoi: "The memory validator must fail closed before it can be trusted; injecting duplicate IDs, missing V3.2 fields, broken links, and an unlogged status mutation proved doctor catches structural corruption while the canonical SCRIBE remains clean."
+    scribe_delta: "JOURNAL-010"
+  - id: "JOURNAL-011"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-002", "VAC-003", "PAT-003"]
+    l0_abstract: "Promoted scribe doctor into a mandatory pre/post guard for every SCRIBE evolution."
+    pourquoi: "After the controlled corruption test, doctor is no longer optional process hygiene; it is the mechanical gate that proves a memory delta starts from a sane state and does not corrupt the canonical SCRIBE."
+    scribe_delta: "PAT-003 | JOURNAL-011"
+  - id: "JOURNAL-012"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-003", "PAT-002"]
+    l0_abstract: "Added a reusable scribe guard command and future-agent instructions for pre/post doctor enforcement."
+    pourquoi: "A rule inside the workflow can still be forgotten by a future agent; exposing `./scribe guard -- <command>` and documenting it in AGENTS.md turns the doctor guard into a repeatable mechanism for command-based SCRIBE mutations."
+    scribe_delta: "JOURNAL-012"
+  - id: "JOURNAL-013"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-003", "PAT-002"]
+    l0_abstract: "Created a separate SCRIBE-RAG engineering workspace under the workflow directory."
+    pourquoi: "Future query/challenge/RAG design needs a place for specs and experiments without contaminating the active SCRIBE protocol or the canonical project memory."
+    scribe_delta: "JOURNAL-013"
+  - id: "JOURNAL-014"
+    date: "2026-05-23"
+    mode: "QUICK"
+    hot_entries_consulted: ["PAT-003"]
+    l0_abstract: "Grouped generated scribe doctor reports under scribe-out."
+    pourquoi: "Doctor reports are validation artifacts, not project source; keeping them in a dedicated output directory preserves root readability while maintaining the pre/post guard audit trail."
+    scribe_delta: "JOURNAL-014"
+  - id: "JOURNAL-015"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-003", "PAT-004"]
+    l0_abstract: "Changed SCRIBE tooling defaults so doctor Markdown reports are generated under scribe-out."
+    pourquoi: "Moving existing reports was not enough; future doctor and guard runs needed a default output policy so agents do not recreate report files at repository root."
+    scribe_delta: "PAT-004 | JOURNAL-015"
+  - id: "JOURNAL-016"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-001", "PAT-002", "PAT-003", "PAT-004"]
+    l0_abstract: "Patched the installed Graphify hook generator to stop recreating unsupported PreToolUse additionalContext output."
+    pourquoi: "Fixing only `.codex/hooks.json` was fragile because `graphify codex install` could regenerate the same invalid hook; patching the installed template and documenting the resolution in AGENTS.md prevents the error from coming back during reinstall."
+    scribe_delta: "VAC-004 | JOURNAL-016"
+  - id: "JOURNAL-017"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-001", "PAT-002", "PAT-003", "PAT-004", "VAC-004"]
+    l0_abstract: "Completed the PreToolUse additionalContext fix across the second Graphify installation and the global Gemini trusted hook registry."
+    pourquoi: "The earlier fix missed two active recurrence paths: the pipx Graphify copy and `/home/jack-josias/.gemini/trusted_hooks.json`; sanitizing both removes the stale executable sources that kept the runtime error visible after the project hook was fixed."
+    scribe_delta: "VAC-004 | JOURNAL-017"
+  - id: "JOURNAL-018"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-003", "PAT-004", "PAT-005", "VAC-004"]
+    l0_abstract: "Reorganized SCRIBE/TENOR tooling into an importable engineering bundle with root adapters."
+    pourquoi: "The user wanted a portable architecture for reuse in other projects; moving the full implementation into the bundle while leaving tiny root adapters prevents tool breakage and keeps project bootstrap predictable."
+    scribe_delta: "PAT-005 | JOURNAL-018"
+  - id: "JOURNAL-019"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-003", "PAT-004", "PAT-005", "PAT-006", "VAC-004"]
+    l0_abstract: "Added `scribe install` for portable SCRIBE/TENOR bundle imports."
+    pourquoi: "The bundle needed a repeatable installer rather than manual copying; conflict checks, managed root blocks, dry-run support, and idempotence tests make it safe to import into other projects without clobbering their existing agent instructions."
+    scribe_delta: "PAT-006 | JOURNAL-019"
+  - id: "JOURNAL-020"
+    date: "2026-05-23"
+    mode: "QUICK"
+    hot_entries_consulted: ["PAT-005", "PAT-006"]
+    l0_abstract: "Archived the legacy SCRIBE v3.1 workflow file with a `.old` suffix."
+    pourquoi: "Leaving an old workflow filename beside the active bundle can mislead future agents into treating stale protocol text as current; the `.old` suffix preserves history while making the active source of truth unambiguous."
+    scribe_delta: "JOURNAL-020"
+  - id: "JOURNAL-021"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-003", "PAT-005", "PAT-006", "VAC-004", "VAC-005"]
+    l0_abstract: "Restored root `scripts/` as shim-only compatibility after the bundle migration."
+    pourquoi: "The bundle move was architecturally correct, but removing the root Python module path entirely broke editor/type-checker resolution for legacy imports; shim adapters preserve static-analysis compatibility while keeping the canonical implementation inside the portable bundle."
+    scribe_delta: "VAC-005 | JOURNAL-021"
+  - id: "JOURNAL-022"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-003", "PAT-005", "PAT-006", "PAT-007", "VAC-005"]
+    l0_abstract: "Implemented the V1 local SCRIBE retrieval and challenge command set."
+    pourquoi: "The bundle needed practical agent-facing retrieval, not just validation; a shared CSafeLoader-backed store, deterministic local index, and lightweight command set let future LLMs retrieve causal memory without polluting or depending on the Graphify structural graph."
+    scribe_delta: "PAT-007 | JOURNAL-022"
+  - id: "JOURNAL-023"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-003", "PAT-005", "PAT-006", "PAT-007", "PAT-008", "VAC-005"]
+    l0_abstract: "Structured the SCRIBE engineering bundle and added targeted unit tests for store and memory commands."
+    pourquoi: "The V1 retrieval code had become functional but under-verified, and the bundle root mixed docs, templates, scripts, and generated caches; separating responsibilities and testing the parse/index/query/challenge path makes the bundle safer to import into future projects."
+    validations:
+      - "unittest discover: 7 tests passed"
+      - "Pyrefly: 0 errors"
+      - "py_compile: 23 Python files compiled"
+      - "scribe install dry-run: unchanged"
+      - "bundle file scan: no __pycache__ after ./scribe stats"
+    scribe_delta: "PAT-008 | JOURNAL-023"
+  - id: "JOURNAL-024"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-003", "PAT-006", "PAT-007", "PAT-008", "PAT-009", "VAC-005"]
+    l0_abstract: "Completed SCRIBE maintenance commands for compact, promote, and export."
+    pourquoi: "After retrieval commands made the SCRIBE readable, the bundle still needed operational commands for lifecycle management: compact reports safe tier cleanup, promote moves one memory with targeted rollback-protected patches, and export emits deterministic JSON for future dashboards or RAG integration."
+    validations:
+      - "unittest discover: 11 tests passed"
+      - "Pyrefly: 0 errors"
+      - "py_compile: 23 Python files compiled"
+      - "scribe compact: already compact on canonical SCRIBE"
+      - "scribe promote PAT-008 --tier hot --dry-run: file unchanged"
+      - "scribe export --format json: 47 entities exported, 0 doctor errors"
+      - "scribe install dry-run: unchanged"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+    scribe_delta: "PAT-009 | JOURNAL-024"
+  - id: "JOURNAL-025"
+    date: "2026-05-23"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-007", "PAT-008", "PAT-009", "VAC-005"]
+    l0_abstract: "Validated compact/promote/export and chose archive before dashboard."
+    pourquoi: "The maintenance trio is stable and already covers local retrieval lifecycle basics; adding archive next creates the retention primitive that a future dashboard should display, while dashboard-first would add presentation before memory aging policy."
+    validations:
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+      - "scribe compact: already compact"
+      - "scribe promote PAT-009 --tier hot --dry-run: file unchanged"
+      - "scribe export validation: 49 entities, 0 doctor errors, 5 legacy warnings, 123 causal edges"
+      - "unittest discover: 11 tests passed"
+      - "Pyrefly: 0 errors"
+      - "scribe install dry-run: unchanged"
+    scribe_delta: "GHOST-001 | JOURNAL-025"
+  - id: "JOURNAL-026"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-001", "PAT-003", "PAT-008", "PAT-009", "PAT-010", "VAC-005"]
+    l0_abstract: "Implemented `scribe archive` as a dry-run guarded cold-memory archival command."
+    pourquoi: "Archive is the lifecycle primitive chosen before dashboard; implementing it with a dedicated archive module, unit tests, dry-run default, archive YAML validation, active-debt skip policy, and doctor rollback prevents memory pruning from becoming a destructive hidden rewrite."
+    validations:
+      - "unittest discover: 13 tests passed"
+      - "Pyrefly: 0 errors"
+      - "py_compile: 28 Python files compiled"
+      - "scribe archive: no cold candidates, archive file not created"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+      - "scribe install dry-run: unchanged"
+      - "bundle file scan: no __pycache__ after tests and archive dry-run"
+    scribe_delta: "PAT-010 | JOURNAL-026"
+  - id: "JOURNAL-027"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-001", "PAT-007", "PAT-009", "PAT-010", "PAT-011", "VAC-005"]
+    l0_abstract: "Implemented `scribe dashboard` as a static HTML/JSON observability command."
+    pourquoi: "After archive established memory lifecycle rules, dashboard became safe to add as a read-only presentation layer over the deterministic export payload rather than a new source of truth."
+    validations:
+      - "unittest discover: 16 tests passed"
+      - "Pyrefly: 0 errors"
+      - "py_compile: 34 Python files compiled"
+      - "scribe dashboard: generated HTML and JSON for 55 entities after SCRIBE delta"
+      - "dashboard HTML: no external https assets"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+      - "scribe archive: no cold candidates, archive file not created"
+      - "scribe install dry-run: unchanged"
+      - "graphify update: 161 nodes, 121 edges"
+    scribe_delta: "PAT-011 | JOURNAL-027"
+  - id: "JOURNAL-028"
+    date: "2026-05-23"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-002", "PAT-003", "PAT-007", "PAT-008", "PAT-009", "PAT-011", "PAT-012", "VAC-005"]
+    l0_abstract: "Reduced SCRIBE/TENOR agent friction without replacing the restored long V3.2 protocol."
+    pourquoi: "The user wanted honest friction reduction before deeper dashboard work; separating `docs/friction-policy.md` from the canonical long `docs/scribe.md`, adding a dedicated bundle Graphify graph, splitting search and installer internals, and exposing `worktree` classification improves agent speed and reliability without weakening the causal memory guardrails."
+    validations:
+      - "unittest discover: 16 tests passed"
+      - "py_compile: 32 Python files compiled"
+      - "scribe query pyrefly shims: VAC-005 found"
+      - "scribe query recherche memoire: PAT-007 and PAT-009 ranked first"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+      - "scribe install dry-run: unchanged"
+      - "git diff --check: clean"
+      - "scribe graph --build: bundle graph rebuilt"
+      - "scribe graph --query worktree query installer: bundle nodes returned"
+      - "scribe worktree: dirty repo classified instead of auto-cleaned"
+    scribe_delta: "PAT-012 | JOURNAL-028"
+  - id: "JOURNAL-029"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-003", "PAT-011", "PAT-012", "PAT-013", "VAC-005"]
+    l0_abstract: "Improved `scribe dashboard` UI/UX while preserving static export-based generation."
+    pourquoi: "The generated dashboard needed to become a real inspection surface, not just a report; adding responsive layout, visual hierarchy, embedded search, filters, sorting, and Chromium-checked screenshots makes the local SCRIBE memory usable without introducing a server or external dependencies."
+    validations:
+      - "unittest discover: 16 tests passed"
+      - "Pyrefly: 0 errors"
+      - "py_compile: 36 Python files compiled"
+      - "scribe dashboard: generated HTML and JSON for 57 entities"
+      - "dashboard HTML: search/filter/sort controls and entity cards present"
+      - "dashboard HTML: no external https assets"
+      - "Chromium desktop screenshot: rendered without visible layout overlap"
+      - "Chromium mobile screenshot: rendered without visible layout overlap"
+      - "scribe install dry-run: unchanged"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+      - "scribe graph --build: bundle graph rebuilt after dashboard UX split"
+      - "git diff --check: clean"
+    scribe_delta: "PAT-013 | JOURNAL-029"
+  - id: "JOURNAL-030"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-003", "PAT-011", "PAT-013", "PAT-014", "VAC-005"]
+    l0_abstract: "Replaced the generic dashboard metric band with a local ECharts analytics cockpit."
+    pourquoi: "The metric cards looked generic and low-signal; a compact operational snapshot plus real ECharts charts for tiers, collections, and risk makes the dashboard feel like an inspection tool while preserving offline static generation."
+    validations:
+      - "unittest discover: 16 tests passed"
+      - "Pyrefly: 0 errors"
+      - "py_compile: 36 Python files compiled"
+      - "scribe dashboard: generated HTML and JSON for 61 entities after SCRIBE delta"
+      - "dashboard HTML: local ECharts runtime embedded"
+      - "dashboard HTML: no external https assets"
+      - "Chromium desktop screenshot: ECharts charts rendered"
+      - "Chromium mobile screenshot: no horizontal overflow after wrapping fix"
+      - "scribe install dry-run: unchanged"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+    scribe_delta: "PAT-014 | JOURNAL-030"
+  - id: "JOURNAL-031"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-003", "PAT-012", "PAT-015", "VAC-005"]
+    l0_abstract: "Treated the dirty worktree by separating generated noise from staged source changes."
+    pourquoi: "The worktree was operationally unusable because `.gitignore` was deleted, generated artifacts appeared as source, and real source changes were mixed with untracked files. Restoring ignore coverage and staging source changes makes the diff reviewable without committing or destroying user work."
+    validations:
+      - "./scribe worktree: 0 untracked_source_candidates, 0 generated_noise, 0 other_untracked"
+      - "git diff --name-only: no unstaged source changes"
+      - "git diff --check --cached: clean"
+      - "git diff --check: clean"
+      - "unittest discover: 16 tests passed"
+      - "py_compile: 34 Python files compiled"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+      - "scribe install dry-run: unchanged"
+      - "ignored runtime artifacts include .env, node_modules, dist, .next, graphify-out, scribe-out, .codex, and .vscode"
+    scribe_delta: "PAT-015 | JOURNAL-031"
+  - id: "JOURNAL-032"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-003", "PAT-015", "VAC-005"]
+    l0_abstract: "Prepared an atomic commit plan for the staged worktree without committing."
+    pourquoi: "The staged diff is valid but too large for one responsible commit; generating ignored pathspec groups gives a reproducible split by repo hygiene, agent tooling, docs, backend, frontend, and legacy-root removal while preserving the current staged state until the user explicitly authorizes commits."
+    validations:
+      - "commit-plan pathspecs: 207 / 207 staged paths covered"
+      - "01-repo-hygiene: 1 path"
+      - "02-agent-scribe-tooling: 56 paths"
+      - "03-project-docs: 8 paths"
+      - "04-backend-app: 42 paths"
+      - "05-frontend-app: 33 paths"
+      - "06-remove-legacy-root-app: 67 paths"
+      - "backend npm run build: passed"
+      - "frontend npm run lint: passed"
+      - "frontend npm run build: passed"
+    scribe_delta: "JOURNAL-032"
+metrics:
+  sessions_total: 32
+  scars_total: 0
+  vaccins_actifs: 5
+  taux_recidive: 0.0
+  bugs_prevenus_par_vaccin: 0
+  complexite_moyenne: 0.0
+  mode_distribution:
+    CRITICAL: 11
+    STANDARD: 18
+    QUICK: 3
+  dette_p0_p1_courante: 1
+  dezoom_total: 0
+  taux_dezoom_par_session: 0.0
+  torvalds_items_total: 0
+  torvalds_items_traites: 0
+  taux_completion_prod_moyenne: 0.0
+  delta_feuille_vs_prod_moyen: 0.0
+  graphify_queries_total: 9
+  tokens_saved_via_graphify: 67200
