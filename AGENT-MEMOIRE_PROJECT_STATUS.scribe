@@ -1,6 +1,6 @@
 schema_version: "TENOR_SCRIBE_v1"
 project: "JJK Messenger"
-last_update: "2026-05-23"
+last_update: "2026-05-24"
 created_at: "2026-05-20"
 template_source: "missing:.agent/workflows/scribe.md"
 notes:
@@ -28,6 +28,7 @@ tiers:
     - "PAT-013"
     - "PAT-014"
     - "PAT-015"
+    - "PAT-016"
   warm:
     - "DEBT-001"
     - "GHOST-001"
@@ -548,6 +549,32 @@ patterns:
       verdict: "still_valid"
     status_log: []
     tier_log: []
+  - id: "PAT-016"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-033"
+      observable: "After excluding vendor/minified assets, the bundle Graphify report promoted SCRIBE functions like `load_scribe()` and `check_all()` instead of minified ECharts symbols."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Noise-free bundle graph and tolerant local retrieval"
+    l0_abstract: "Bundle graphs must exclude vendored/minified assets, and SCRIBE search should stay local while tolerating small query typos."
+    pourquoi: "Minified vendor runtimes destroy graph signal by becoming meaningless god-nodes, while exact-only lexical search misses realistic agent/user typos. Strict graph skips plus bounded fuzzy scoring preserve speed and architecture signal without adding embeddings, network calls, or app-graph pollution."
+    contexte: "SCRIBE/TENOR bundle graphing, local causal retrieval, and friction-aware agent workflow."
+    liens_causaux:
+      source: "JOURNAL-033"
+      renforce: ["PAT-002", "PAT-007", "PAT-012", "PAT-014", "VAC-005"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-033"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
 ghosts:
   - id: "GHOST-001"
     tier: "warm"
@@ -905,8 +932,23 @@ journal:
       - "frontend npm run lint: passed"
       - "frontend npm run build: passed"
     scribe_delta: "JOURNAL-032"
+  - id: "JOURNAL-033"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-002", "PAT-007", "PAT-012", "PAT-014", "PAT-016", "VAC-005"]
+    l0_abstract: "Removed SCRIBE bundle graph noise and tightened the fast-path retrieval workflow."
+    pourquoi: "The bundle was technically usable but ECharts minified symbols polluted Graphify, dashboard rendering helpers were too concentrated, exact-only search missed realistic typo/French approximations, and the friction policy still needed automatic tier selection to prevent agents from spending more attention on ritual than on small fixes."
+    validations:
+      - "scribe graph --build: rebuilt bundle graph without vendor/minified god-nodes"
+      - "bundle god-nodes: load_scribe, check_all, Finding, write_fixture, ScribeStore"
+      - "unittest discover: 18 tests passed"
+      - "py_compile: bundle and root shim Python files compiled"
+      - "scribe dashboard: generated static HTML and JSON from canonical SCRIBE"
+      - "scribe query friciton perfermance: typo query returned friction memory"
+      - "scribe doctor: 0 errors, 5 legacy warnings"
+    scribe_delta: "PAT-016 | JOURNAL-033"
 metrics:
-  sessions_total: 32
+  sessions_total: 33
   scars_total: 0
   vaccins_actifs: 5
   taux_recidive: 0.0
@@ -914,7 +956,7 @@ metrics:
   complexite_moyenne: 0.0
   mode_distribution:
     CRITICAL: 11
-    STANDARD: 18
+    STANDARD: 19
     QUICK: 3
   dette_p0_p1_courante: 1
   dezoom_total: 0
@@ -923,5 +965,5 @@ metrics:
   torvalds_items_traites: 0
   taux_completion_prod_moyenne: 0.0
   delta_feuille_vs_prod_moyen: 0.0
-  graphify_queries_total: 9
-  tokens_saved_via_graphify: 67200
+  graphify_queries_total: 12
+  tokens_saved_via_graphify: 69300
