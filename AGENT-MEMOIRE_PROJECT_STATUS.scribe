@@ -1,40 +1,57 @@
 schema_version: "TENOR_SCRIBE_v1"
 project: "JJK Messenger"
-last_update: "2026-05-24"
+last_update: "2026-05-25"
 created_at: "2026-05-20"
-template_source: "missing:.agent/workflows/scribe.md"
+template_source: ".agent/workflow/scribe-engineering-local-causal-retrieval/templates/scribe.master-template.yaml"
 notes:
-  - "SCRIBE initialized because AGENT-MEMOIRE_PROJECT_STATUS.scribe was absent and the official template was not present in this workspace."
+  - "SCRIBE initialized from a legacy-missing template situation, then migrated to the portable local causal retrieval bundle."
   - "Only causal memory belongs here; structural facts belong to Graphify when graphify-out is available."
 tiers:
   hot:
-    - "VAC-001"
-    - "VAC-002"
-    - "VAC-003"
     - "VAC-004"
     - "VAC-005"
-    - "PAT-001"
-    - "PAT-002"
+    - "VAC-006"
+    - "SCAR-001"
+    - "SCAR-002"
+    - "GHOST-002"
     - "PAT-003"
-    - "PAT-004"
+    - "PAT-007"
+    - "PAT-012"
+    - "PAT-019"
+    - "PAT-024"
+    - "GHOST-003"
+  warm:
+    - "DEBT-001"
+    - "GHOST-001"
+    - "VAC-002"
+    - "VAC-003"
+    - "VAC-007"
+    - "VAC-008"
+    - "PAT-002"
     - "PAT-005"
     - "PAT-006"
-    - "PAT-007"
     - "PAT-008"
     - "PAT-009"
     - "PAT-010"
-    - "PAT-011"
-    - "PAT-012"
-    - "PAT-013"
-    - "PAT-014"
     - "PAT-015"
     - "PAT-016"
     - "PAT-017"
     - "PAT-018"
-  warm:
-    - "DEBT-001"
-    - "GHOST-001"
-  cold: []
+    - "PAT-020"
+    - "PAT-021"
+    - "PAT-022"
+    - "PAT-023"
+    - "GHOST-004"
+    - "GHOST-005"
+  cold:
+    - "DEBT-003"
+    - "DEBT-002"
+    - "VAC-001"
+    - "PAT-001"
+    - "PAT-004"
+    - "PAT-011"
+    - "PAT-013"
+    - "PAT-014"
 invariants:
   - id: "INV-F001"
     status: "active"
@@ -66,16 +83,47 @@ invariants:
   - id: "INV-F010"
     status: "active"
     l0_abstract: "Read Graphify report first when graphify-out is present."
-scars: []
+scars:
+  - id: "SCAR-001"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    severite: "HIGH"
+    titre: "Bundle identity drift broke root adapter"
+    l0_abstract: "Renaming SCRIBE bundle adapters without moving the canonical folder makes `./scribe` fail with FileNotFoundError."
+    cause_racine: "The bundle identity changed in root adapters and installer templates while the physical folder and bundle graph output stayed on the older `scribe-engineering-rag` layout."
+    detection: "`./scribe context` and `./scribe challenge` failed while looking for `.agent/workflow/scribe-engineering-local-causal-retrieval/scripts/scribe_memory.py`."
+    correction: "Move the bundle folder atomically, keep root adapters as shims, route bundle Graphify output under `scribe-out/bundle-graph/`, and bind the identity contract to tests."
+    test_binding: ".agent/workflow/scribe-engineering-local-causal-retrieval/tests/test_scribe_memory.py::test_bundle_identity_matches_adapter_paths"
+    liens_causaux:
+      prevenu_par: ["JOURNAL-037"]
+      renforce: ["VAC-005", "PAT-005", "PAT-006", "PAT-012", "PAT-016"]
+  - id: "SCAR-002"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    severite: "HIGH"
+    titre: "Graphify hook contract drift"
+    l0_abstract: "Graphify-generated hooks that emit unsupported fields or exit before consuming stdin recreate repeated PreToolUse/BeforeToolUse failures across agent hosts."
+    cause_racine: "The hook contract lived in installed Graphify templates and global trusted registries, so fixing only the project hook left reinstall and Gemini paths able to reintroduce the same runtime failure."
+    detection: "The user kept seeing `AvantUtilisationOutil failed` / `PreToolUse hook returned unsupported additionalContext`, then later Graphify hook stdin recurrence paths, after a local project hook cleanup."
+    correction: "Patch active Graphify templates, keep a bundle `scribe graphify-hooks` guard, preserve upstreamable patch files, and treat VAC-004/PAT-022 as recurrence controls after reinstall or upgrade."
+    test_binding: ".agent/workflow/scribe-engineering-local-causal-retrieval/tests/test_scribe_graphify_hooks.py"
+    liens_causaux:
+      prevenu_par: ["JOURNAL-016", "JOURNAL-041", "JOURNAL-043"]
+      renforce: ["VAC-004", "PAT-022"]
 vaccins:
   - id: "VAC-001"
+    tier: "cold"
     titre: "Next 16 lint CLI"
     l0_abstract: "After upgrading to Next.js 16, keep linting on ESLint CLI with native flat config; never keep `next lint`."
     virus: "Leaving `next lint` or FlatCompat-based Next extends after Next 16 creates broken lint workflows."
     antidote: "Use `eslint .` and import `eslint-config-next/core-web-vitals` plus `eslint-config-next/typescript` directly in `eslint.config.mjs`."
     contexte: "Frontend upgrades to Next.js 16."
   - id: "VAC-002"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date_creation: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -100,7 +148,7 @@ vaccins:
     status_log: []
     tier_log: []
   - id: "VAC-003"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date_creation: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -143,14 +191,14 @@ vaccins:
     titre: "Graphify PreToolUse schema compatibility"
     l0_abstract: "Graphify-generated PreToolUse hooks must never emit unsupported fields and must consume stdin before exiting."
     virus: "Reinstalling Graphify from any unpatched installation, leaving global trusted hooks stale, or using a hook command that exits without reading stdin recreates PreToolUse failures."
-    antidote: "Use a stdin-consuming Codex hook command (`python3 -c \"import sys; sys.stdin.read()\" # graphify hook`), patch every Graphify installation, sanitize global trusted hooks, rerun `graphify codex install`, and verify no executable hook source contains `additionalContext`, `hookSpecificOutput`, or the stdin-broken legacy command."
+    antidote: "Use stdin-consuming hook commands for Codex and Gemini trusted registries, patch every active Graphify installation template, rerun `graphify codex install`, and verify no executable hook source contains `additionalContext`, `hookSpecificOutput`, legacy echo-only Gemini allow commands, or any graphify hook command that exits before reading stdin."
     contexte: "Graphify Codex/Gemini hook generation, project hook compatibility, and global trusted hook registries."
     liens_causaux:
       complements: ["PAT-001", "PAT-002", "PAT-003", "PAT-004"]
       prevenu_par: ["JOURNAL-016"]
     validite:
       derniere_verif: "2026-05-24"
-      verifie_par: "JOURNAL-034"
+      verifie_par: "JOURNAL-041"
       verdict: "still_valid"
     status_log: []
     tier_log: []
@@ -160,7 +208,7 @@ vaccins:
     date_creation: "2026-05-23"
     schema_patch_date: "2026-05-23"
     source: "JOURNAL-021"
-    scope: "dev"
+    scope: "bundle"
     evidence:
       type: "OBSERVED"
       source: "JOURNAL-021"
@@ -168,28 +216,121 @@ vaccins:
     confirmed_sessions: []
     human_validated: false
     validated_by_session: null
-    titre: "Root script shims after bundle moves"
-    l0_abstract: "When SCRIBE tooling moves into the bundle, keep repository-root `scripts/*.py` shims for static analyzers and legacy imports."
-    virus: "Removing the root script path entirely after a bundle migration makes editors and type checkers report missing imports even when `./scribe` still works."
-    antidote: "Keep root `scripts/` as shim-only adapters that re-export the canonical bundle modules, ignore that directory in Graphify, and teach `scribe install` to recreate the shims idempotently."
-    contexte: "SCRIBE/TENOR bundle migration, Pyrefly diagnostics, and cross-project installer behavior."
+    titre: "Rootless bundle after compatibility moves"
+    l0_abstract: "When SCRIBE tooling moves into the bundle, keep the canonical CLI and implementation inside the bundle; root adapters are legacy opt-in only."
+    virus: "Leaving active root `scribe` or root `scripts/` beside the bundle makes multi-agent sessions edit or execute the wrong surface."
+    antidote: "Use `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe` as the canonical command, generate root files only with explicit `install --with-root-adapters`, and never store generated adapters inside the bundle."
+    contexte: "SCRIBE/TENOR bundle migration, Pyrefly stale diagnostics, and cross-project installer behavior."
     liens_causaux:
       renforce: ["PAT-005", "PAT-006"]
       prevenu_par: ["JOURNAL-021"]
     validite:
-      derniere_verif: "2026-05-23"
-      verifie_par: "JOURNAL-021"
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-038"
       verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-006"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    source: "JOURNAL-037"
+    scope: "bundle"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-037"
+      observable: "Root `./scribe` and shims pointed to `scribe-engineering-local-causal-retrieval` while the physical bundle still existed as `scribe-engineering-rag`, causing FileNotFoundError."
+    confirmed_sessions:
+      - session: "JOURNAL-051"
+        observation: "Global Gemini prompt and host `.agent/rules/scribe.md` now point to the canonical bundle docs/CLI instead of the legacy workflow path."
+    human_validated: false
+    validated_by_session: null
+    titre: "Atomic SCRIBE bundle identity"
+    l0_abstract: "Any SCRIBE bundle identity change must move directory, adapters, installer templates, docs, tests, and generated-output paths in one validated change."
+    virus: "Changing only root adapters or docs creates a split-brain bundle where one LLM writes the new name and another still reads or executes the old layout."
+    antidote: "Use one canonical folder name and bundle-local CLI path, install rootlessly by default, generate legacy adapters from templates only on opt-in, store generated bundle graphs under `scribe-out/bundle-graph/`, keep global host prompts and `.agent/rules/scribe.md` pointed at `docs/scribe.md`, and validate with bundle-command stats, installer dry-run, tests, and graph build."
+    contexte: "Multi-agent SCRIBE/TENOR bundle maintenance and cross-project installation."
+    liens_causaux:
+      source: "JOURNAL-037"
+      renforce: ["SCAR-001", "VAC-005", "PAT-005", "PAT-006", "PAT-012", "PAT-016"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-051"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-007"
+    tier: "warm"
+    status: "ACTIVE"
+    date_creation: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    source: "JOURNAL-052"
+    scope: "frontend"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-052"
+      observable: "Next.js 16.2.6 with Turbopack failed on localhost because `next/font/google` generated a CSS URL to `@vercel/turbopack-next/internal/font/google/font` that could not be resolved."
+    confirmed_sessions:
+      - session: "JOURNAL-052"
+        observation: "Removing `next/font/google` from `frontend/src/app/layout.tsx` and defining font variables in `globals.css` made lint, build, and localhost routing pass."
+    human_validated: false
+    validated_by_session: "JOURNAL-052"
+    titre: "Next font Google Turbopack fallback"
+    l0_abstract: "When Next 16 Turbopack cannot resolve the internal Google font loader, avoid `next/font/google` and keep font variables in CSS."
+    virus: "Keeping `Geist` imports from `next/font/google` can block the dev server with an internal Turbopack font module resolution error."
+    antidote: "Remove the `next/font/google` import from `layout.tsx`, keep body classes static, and define `--font-geist-sans` / `--font-geist-mono` fallbacks in `globals.css`."
+    contexte: "Next.js 16 frontend dev server and build pipeline."
+    liens_causaux:
+      source: "JOURNAL-052"
+      complements: ["VAC-001"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-052"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-008"
+    tier: "warm"
+    status: "ACTIVE"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    source: "JOURNAL-053"
+    scope: "frontend"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-053"
+      observable: "React/Next showed a hydration mismatch on `/login` where the client DOM had extension-injected attributes such as `bis_skin_checked`, `bis_register`, `cz-shortcut-listen`, and `__processed_*` that were absent from server HTML."
+    confirmed_sessions:
+      - session: "JOURNAL-053"
+        observation: "Root layout initially suppressed root hydration noise and tried an inline `<head>` cleanup for known extension attributes."
+      - session: "JOURNAL-059"
+        observation: "The inline `<head>` cleanup itself collided with the extension-injected script, so the app now avoids manual root-layout `<head>` and runs a scoped client sanitizer from `<body>`."
+    human_validated: false
+    validated_by_session: "JOURNAL-053"
+    titre: "Browser extension hydration attributes"
+    l0_abstract: "If React hydration mismatches show `bis_*`, `cz-shortcut-listen`, or `__processed_*`, treat browser extension DOM mutation as the cause before changing page state."
+    virus: "Chasing app SSR state bugs when the mismatch is only extension-injected attributes wastes time; adding manual root-layout `<head>` scripts can create a new hydration comparison target."
+    antidote: "Keep deterministic SSR, keep root `suppressHydrationWarning`, avoid manual `<head>` in App Router root layouts, and use a scoped client sanitizer for known extension attributes/scripts. If a `chrome-extension://` script still appears before React loads, verify in an extension-free/incognito browser because that DOM mutation is outside application control."
+    contexte: "Next.js 16 dev overlay hydration diagnostics on login/register pages."
+    liens_causaux:
+      source: "JOURNAL-053"
+      complements: ["VAC-007"]
+    validite:
+      derniere_verif: "2026-05-25"
+      verifie_par: "JOURNAL-059"
+      verdict: "updated_antidote"
     status_log: []
     tier_log: []
 patterns:
   - id: "PAT-001"
+    tier: "cold"
     titre: "Canonical Graphify Root"
     l0_abstract: "Keep the canonical Graphify graph at repository root `graphify-out/` so Codex hooks and AGENTS.md resolve it automatically."
     contexte: "Graphify installation for this project."
     pourquoi: "A subfolder graph can be valid for manual reading, but Codex hooks installed by `graphify codex install` check root `graphify-out/`; duplicating graphs creates stale-memory risk."
   - id: "PAT-002"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -240,7 +381,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-004"
-    tier: "hot"
+    tier: "cold"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -266,7 +407,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-005"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -279,20 +420,20 @@ patterns:
     human_validated: false
     validated_by_session: null
     titre: "Importable SCRIBE engineering bundle"
-    l0_abstract: "Keep reusable SCRIBE/TENOR assets under `.agent/workflow/scribe-engineering-rag/` and preserve root behavior with small adapters."
+    l0_abstract: "Keep reusable SCRIBE/TENOR assets under `.agent/workflow/scribe-engineering-local-causal-retrieval/` and preserve root behavior with small adapters."
     pourquoi: "A raw move would break agent bootstrap, Graphify ignore behavior, and the stable `./scribe` entrypoint; adapters let the bundle be portable while existing tools keep working."
     contexte: "Project cleanup, reusable agent tooling, and cross-project SCRIBE migration."
     liens_causaux:
       source: "JOURNAL-018"
       renforce: ["PAT-003", "PAT-004"]
     validite:
-      derniere_verif: "2026-05-23"
-      verifie_par: "JOURNAL-018"
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-037"
       verdict: "still_valid"
     status_log: []
     tier_log: []
   - id: "PAT-006"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -344,7 +485,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-008"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -370,7 +511,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-009"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -396,7 +537,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-010"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -422,7 +563,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-011"
-    tier: "hot"
+    tier: "cold"
     status: "ACTIVE"
     date: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -474,7 +615,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-013"
-    tier: "hot"
+    tier: "cold"
     status: "ACTIVE"
     date: "2026-05-24"
     schema_patch_date: "2026-05-24"
@@ -500,7 +641,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-014"
-    tier: "hot"
+    tier: "cold"
     status: "ACTIVE"
     date: "2026-05-24"
     schema_patch_date: "2026-05-24"
@@ -526,7 +667,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-015"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-24"
     schema_patch_date: "2026-05-24"
@@ -552,7 +693,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-016"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-24"
     schema_patch_date: "2026-05-24"
@@ -578,7 +719,7 @@ patterns:
     status_log: []
     tier_log: []
   - id: "PAT-017"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-24"
     schema_patch_date: "2026-05-24"
@@ -602,9 +743,13 @@ patterns:
       verifie_par: "JOURNAL-035"
       verdict: "still_valid"
     status_log: []
-    tier_log: []
+    tier_log:
+      - date: "2026-05-24"
+        from: "hot"
+        to: "warm"
+        reason: "PAT-024 became the sharper hot memory for Graphify app-vs-bundle confusion; keep hot tier bounded."
   - id: "PAT-018"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date: "2026-05-24"
     schema_patch_date: "2026-05-24"
@@ -626,6 +771,168 @@ patterns:
     validite:
       derniere_verif: "2026-05-24"
       verifie_par: "JOURNAL-036"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-019"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "bundle"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-038"
+      observable: "Root `scribe` and root `scripts/` are absent while the bundle-local `scribe` command, canonical scripts, generated-adapter templates, installer dry-run, and unit tests pass."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Rootless portable SCRIBE bundle"
+    l0_abstract: "The SCRIBE bundle is self-contained by default: canonical command, scripts, docs, tests, and generated-adapter templates live under the bundle folder."
+    pourquoi: "Visible root adapters made agents infer two competing ownership surfaces. Keeping normal execution inside the bundle and making root adapters generated opt-in outputs gives five asynchronous LLM agents one canonical path while preserving legacy import bridges for projects that deliberately need them."
+    contexte: "Portable SCRIBE/TENOR installs, multi-agent coordination, and local causal retrieval architecture."
+    liens_causaux:
+      source: "JOURNAL-038"
+      renforce: ["SCAR-001", "VAC-005", "VAC-006", "PAT-006", "PAT-012", "PAT-016", "PAT-018"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-038"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-020"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "bundle"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-039"
+      observable: "The rootless bundle now includes `docs/multi-agent-installation.md`, README/docs links, generated AGENTS guidance, and a unit test binding the runbook to the bundle identity contract."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Canonical multi-agent install runbook"
+    l0_abstract: "Every portable SCRIBE install needs one canonical rootless runbook that tells agents how to bootstrap, coordinate, validate, and recover drift."
+    pourquoi: "A large rootless migration is easy to misread from git status alone. A short runbook turns the architecture into an executable operating procedure for several asynchronous LLM agents instead of leaving each agent to infer rules from scattered docs."
+    contexte: "Cross-project SCRIBE/TENOR installation, async multi-agent coding, and bundle portability."
+    liens_causaux:
+      source: "JOURNAL-039"
+      renforce: ["PAT-006", "PAT-019", "VAC-005", "VAC-006", "SCAR-001"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-039"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-021"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "bundle"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-040"
+      observable: "The materialized `adapters/root/scripts` tree was removed; the bundle now stores only canonical scripts plus installer templates for optional legacy root adapter generation."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Generated adapters are not source"
+    l0_abstract: "Do not store generated legacy adapter files inside the SCRIBE bundle when templates can recreate them."
+    pourquoi: "A stored adapter tree repeats canonical script filenames and makes agents think there are two implementations. Keeping only templates removes visual duplication while preserving `--with-root-adapters` for legacy projects."
+    contexte: "DRY/SRE bundle layout, optional root adapters, and multi-agent source ownership."
+    liens_causaux:
+      source: "JOURNAL-040"
+      renforce: ["PAT-006", "PAT-019", "PAT-020", "VAC-005", "VAC-006"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-040"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-022"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-043"
+      observable: "The bundle now exposes `scribe graphify-hooks` and an upstreamable patch file so the Graphify stdin hook fix can be rechecked and reapplied after reinstall."
+    confirmed_sessions: []
+    human_validated: false
+    validated_by_session: null
+    titre: "Executable guard for external hook patches"
+    l0_abstract: "Critical fixes to external installed tooling must travel as bundle docs, patch files, and executable verification commands, not only as local site-packages edits."
+    pourquoi: "A site-packages patch disappears on reinstall; an executable bundle guard turns the fix into a repeatable procedure future agents can run after upstream drift."
+    contexte: "Graphify hook stdin compatibility and any future external-tooling patch with reinstall risk."
+    liens_causaux:
+      source: "JOURNAL-043"
+      renforce: ["VAC-004", "JOURNAL-041", "JOURNAL-042", "PAT-007", "PAT-012"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-043"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-023"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "universal"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-048"
+      observable: "`scribe clean --apply --graphify` removed 21 generated artifacts while preserving active SCRIBE state, locks, dashboard, doctor report, and Graphify graph outputs."
+    confirmed_sessions:
+      - session: "JOURNAL-048"
+        observation: "Cleanup and portable bootstrap validation completed with doctor at 0 errors."
+    human_validated: true
+    validated_by_session: "JOURNAL-048"
+    titre: "Clean generated memory noise before delivery"
+    l0_abstract: "Run `scribe clean --dry-run` before delivery or commit; generated scribe-out and Graphify cache noise accumulates silently."
+    pourquoi: "Doctor reports, dashboard screenshots, validation exports, commit plans, AST cache overflow, and Python bytecode are useful while working but should not become the visual or portable shape of the bundle."
+    contexte: "Portable SCRIBE bundles, local generated reports, Graphify caches, and multi-agent handoff hygiene."
+    liens_causaux:
+      source: "JOURNAL-048"
+      renforce: ["PAT-015", "PAT-020", "PAT-021", "GHOST-003"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-048"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-024"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "universal"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-050"
+      observable: "`scribe eval --smoke` exposed that graphify application/bundle confusion needed its own memory entry instead of stretching PAT-023 cleanup semantics."
+    confirmed_sessions:
+      - session: "JOURNAL-050"
+        observation: "Renamed bundle graph output to `scribe-out/bundle-graph/`, updated docs/code, and made the smoke case expect PAT-024."
+    human_validated: true
+    validated_by_session: "JOURNAL-050"
+    titre: "Dual Graphify output separation"
+    l0_abstract: "`graphify-out/` is the application graph; `scribe-out/bundle-graph/` is the SCRIBE bundle graph. Never confuse them."
+    pourquoi: "Application coding and SCRIBE-tooling maintenance need separate structural maps. Reusing the generic `scribe-out/graphify/` name made agents and humans wonder whether the graph described the host app or the portable bundle; the explicit `bundle-graph` path names the ownership and prevents retrieval smoke from hiding the distinction inside cleanup policy."
+    contexte: "Graphify application bundle graph confusion, portable SCRIBE bundle maintenance, and host-project app graph separation."
+    liens_causaux:
+      source: "JOURNAL-050"
+      prevenu_par: ["DEBT-002"]
+      contribue_a: ["PAT-002", "PAT-012", "PAT-016"]
+      complements: ["PAT-023"]
+    validite:
+      derniere_verif: "2026-05-24"
+      verifie_par: "JOURNAL-050"
       verdict: "still_valid"
     status_log: []
     tier_log: []
@@ -651,6 +958,104 @@ ghosts:
     liens_causaux:
       source: "JOURNAL-025"
       renforce: ["PAT-007", "PAT-008", "PAT-009"]
+  - id: "GHOST-002"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    titre: "Lock multi-agent local choisi"
+    l0_abstract: "SCRIBE mutations use one local JSON lock in `scribe-out/locks/scribe.lock` before adding database or server coordination."
+    l2_details: >
+      The immediate risk is concurrent local agent writes to the same YAML memory. A tiny lock file with agent, session,
+      pid, timestamp, surface, and TTL prevents accidental overlap while staying portable with the rootless bundle.
+      Doctor and read-only commands stay unblocked so diagnosis remains possible during lock ownership.
+    alternatives_rejetees:
+      - nom: "Pas de lock"
+        raison_rejet: "Corruption possible si deux agents modifient le SCRIBE en parallèle."
+      - nom: "Lock base de données"
+        raison_rejet: "Sur-ingénierie pour un bundle local portable et copiable entre projets."
+    ne_pas_reproposer: ["Pas de lock", "Lock base de données"]
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-045"
+      observable: "`scribe lock acquire/status/release` fonctionne et les commandes mutantes refusent sans verrou actif."
+    liens_causaux:
+      source: "JOURNAL-045"
+      renforce: ["SCAR-001", "PAT-009", "PAT-020"]
+  - id: "GHOST-003"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    titre: "state.json partagé pour resynchronisation multi-agent"
+    l0_abstract: "A shared `scribe-out/state.json` records the last real SCRIBE writer and hash so agents can detect stale context before acting."
+    l2_details: >
+      The lock prevents concurrent writes, but it does not tell a second agent that its context is stale after another agent has already written.
+      The chosen state file stores a hash, line count, writer object, last session, changed IDs, and closed write_kind enum. `sync` reads and alerts
+      without becoming the last writer; `sync --repair` atomically rebuilds state after legitimate manual recovery.
+    alternatives_rejetees:
+      - nom: "HEAD.json"
+        raison_rejet: "The Git analogy implies branch/version semantics the SCRIBE state file does not provide."
+      - nom: "sync met à jour last_writer"
+        raison_rejet: "A reader is not an écrivain; overwriting last_writer hides the true source of the latest memory mutation."
+      - nom: "last_entry_id seul"
+        raison_rejet: "Tier/status/archive mutations can change SCRIBE state without appending a new entity."
+    ne_pas_reproposer: ["HEAD.json", "sync met à jour last_writer", "last_entry_id seul"]
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-046"
+      observable: "`scribe sync` reports stale/missing state, `sync --repair` writes state.json atomically, and doctor warns W011/W012/W013."
+    liens_causaux:
+      source: "JOURNAL-046"
+      renforce: ["GHOST-002", "PAT-020", "PAT-003"]
+  - id: "GHOST-004"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    titre: "Migration Clean Architecture progressive du frontend"
+    l0_abstract: "The JJK frontend now migrates through thin App Router routes, core-layer source of truth, and legacy re-export adapters instead of a big-bang path rewrite."
+    l2_details: >
+      The clean architecture pack was applied as a progressive migration: `src/app` delegates to presentation components,
+      business validation/use cases live under `core/domain` and `core/application`, and Redux/RTK Query/realtime details
+      live under `core/infrastructure`. Legacy paths remain as re-export adapters to preserve hidden imports while new code
+      imports from `src/core/*` or `src/shared/*`.
+    alternatives_rejetees:
+      - nom: "Big-bang deletion of old frontend paths"
+        raison_rejet: "Too risky in a dirty worktree and unnecessary because compatibility re-exports preserve runtime behavior during migration."
+      - nom: "Introduce Next proxy during this refactor"
+        raison_rejet: "The backend contract currently exposes direct REST plus WebSocket send; adding a proxy would be a behavior and deployment change, not only a clean-architecture restructure."
+    ne_pas_reproposer: ["Big-bang deletion of old frontend paths", "Silent Next proxy switch"]
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-057"
+      observable: "`npm run lint`, `npx tsc --noEmit`, `npm run build`, `curl -I /login`, Chromium headless render, and `graphify update .` all passed after the migration."
+    liens_causaux:
+      source: "JOURNAL-057"
+      renforce: ["PAT-024", "INV-F003"]
+  - id: "GHOST-005"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    titre: "Cookie-backed auth boundary choisi"
+    l0_abstract: "Auth now treats browser JavaScript as untrusted: access and refresh secrets live in HttpOnly cookies, while the frontend only stores session identity."
+    l2_details: >
+      The hardening repays the browser-stored JWT debt without inserting a Next.js proxy layer. Direct backend cookies keep the existing REST and Socket.IO topology, refresh rotation narrows stolen-refresh-token lifetime, and a readable CSRF cookie plus origin policy protects unsafe browser requests without exposing bearer tokens to Redux or localStorage.
+    alternatives_rejetees:
+      - nom: "Keep JWT in localStorage for simplicity"
+        raison_rejet: "A single XSS would expose the bearer token and keep the original DEBT-003 production gap alive."
+      - nom: "Move auth through a Next.js proxy in this step"
+        raison_rejet: "The current deployment already has direct REST plus Socket.IO; adding a proxy would widen the behavior and ops change beyond the debt repayment."
+    ne_pas_reproposer: ["Browser-stored bearer JWT", "Silent Next proxy switch during auth debt repayment"]
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-058"
+      observable: "Backend and frontend builds pass after HttpOnly cookie sessions, refresh rotation, CSRF header validation, origin checks, and removal of Redux/localStorage token persistence."
+    liens_causaux:
+      source: "JOURNAL-058"
+      rembourse: ["DEBT-003"]
+      renforce: ["GHOST-004", "VAC-003", "INV-F003"]
 hypotheses: []
 lessons: []
 debts:
@@ -668,6 +1073,63 @@ debts:
       In multi-instance production, each process would keep separate counters, so enforcement must move to Redis,
       an API gateway, or a WAF before horizontal scaling.
     plan_remboursement: "Before multi-instance production, replace the in-memory store with Redis/gateway/WAF rate limiting and configure proxy trust deliberately."
+  - id: "DEBT-002"
+    tier: "cold"
+    status: "REMBOURSEE"
+    titre: "Smoke retrieval graphify dual ambiguity"
+    date_creation: "2026-05-24"
+    schema_patch_date: "2026-05-24"
+    scope: "dev"
+    type: "OBSERVED_RETRIEVAL_GAP"
+    severite: "MEDIUM"
+    l0_abstract: "`scribe eval --smoke` originally missed the graphify application/bundle confusion owner; PAT-024 now owns that distinction."
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-050"
+      observable: "`scribe eval --smoke` passed 4/4 after the smoke expectation moved from PAT-023 to dedicated PAT-024 and the bundle graph output path was renamed to `scribe-out/bundle-graph/`."
+    l2_details: >
+      The failure was a retrieval-quality gap, not a runtime crash. PAT-023 remains the cleanup/noise rule;
+      PAT-024 now owns the distinct Graphify app-vs-bundle graph naming rule.
+    plan_remboursement: "REMBOURSEE: PAT-024 hot plus `scribe-out/bundle-graph/` rename resolved the semantic owner and `scribe eval --smoke` reaches 4/4."
+    liens_causaux:
+      source: "JOURNAL-049"
+      contribue_a: ["PAT-024"]
+    status_log:
+      - date: "2026-05-24"
+        from: "ACTIVE"
+        to: "REMBOURSEE"
+        reason: "PAT-024 and the bundle-graph rename gave the smoke query a dedicated causal owner."
+    tier_log:
+      - date: "2026-05-24"
+        from: "warm"
+        to: "cold"
+        reason: "Debt is repaid and kept searchable as historical retrieval governance."
+  - id: "DEBT-003"
+    tier: "cold"
+    status: "REMBOURSEE"
+    titre: "Browser-stored JWT session"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    type: "CHOISIE"
+    severite: "HIGH"
+    l0_abstract: "The frontend no longer persists bearer JWTs in JavaScript-readable storage; session secrets are backend-set cookies with refresh rotation and CSRF/origin checks."
+    l2_details: >
+      DEBT-003 is repaid by moving access and refresh credentials to HttpOnly backend cookies, rotating refresh tokens with family reuse revocation, storing only public session identity in Redux, cleaning legacy localStorage keys, and requiring CSRF plus origin validation for unsafe browser requests.
+    plan_remboursement: "REMBOURSEE: backend cookie/refresh-token support, frontend cookie-backed session hydration, and removal of token reads from Redux-visible client state are implemented and validated in JOURNAL-058."
+    liens_causaux:
+      source: "JOURNAL-058"
+      explique_par: ["GHOST-005"]
+      renforce: ["VAC-003", "INV-F003"]
+    status_log:
+      - date: "2026-05-25"
+        from: "ACTIVE"
+        to: "REMBOURSEE"
+        reason: "HttpOnly cookie sessions, refresh rotation, CSRF/origin policy, and frontend token removal now replace browser-stored JWTs."
+    tier_log:
+      - date: "2026-05-25"
+        from: "warm"
+        to: "cold"
+        reason: "Debt is repaid and retained as historical auth governance."
 mutations: []
 journal:
   - id: "JOURNAL-001"
@@ -1043,16 +1505,356 @@ journal:
       - "./scribe install . --dry-run: all adapters unchanged"
       - "git diff --check: clean"
     scribe_delta: "PAT-018 | JOURNAL-036"
+  - id: "JOURNAL-037"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-001", "PAT-002", "PAT-005", "PAT-006", "PAT-012", "PAT-016", "VAC-005", "VAC-006", "SCAR-001"]
+    l0_abstract: "Resolved SCRIBE bundle identity drift and generated-output placement."
+    pourquoi: "The user exposed a multi-agent split-brain: adapters and docs had moved to `scribe-engineering-local-causal-retrieval`, but the physical bundle still used the old `scribe-engineering-rag` folder and its generated Graphify output lived inside the bundle. Completing the rename, keeping root `./scribe` and `scripts/` as explicit shims, and moving bundle graph output under `scribe-out/graphify/` restores one canonical implementation path."
+    validations:
+      - "./scribe stats: root adapter resolves the renamed bundle"
+      - "py_compile: root adapter, shim helper, bundle graph script, and worktree script compiled"
+      - "unittest discover: 33 tests passed after reconnecting eval, context JSON, review-hot, dashboard quality, and bundle identity tests"
+      - "unit test added: test_bundle_identity_matches_adapter_paths"
+      - "./scribe context --mode quick --topic bundle identity --format json: returns VAC-006 and SCAR-001"
+      - "./scribe eval --query bundle identity drift --expect SCAR-001: pass_rate 100%"
+      - "./scribe graph --build: bundle graph generated under scribe-out/graphify/scribe-engineering-local-causal-retrieval"
+      - "./scribe install . --dry-run: all adapters unchanged after template convergence"
+      - "./scribe worktree: other_untracked 0 after classifying bundle archives/templates as source"
+      - "./scribe doctor --suggest-fix: 0 errors, 5 legacy warnings"
+      - "git diff --check: clean"
+      - "old bundle name scan: active code/docs no longer reference scribe-engineering-rag except historical SCRIBE context before this delta"
+    scribe_delta: "SCAR-001 | VAC-006 | JOURNAL-037"
+  - id: "JOURNAL-038"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["SCAR-001", "VAC-005", "VAC-006", "PAT-006", "PAT-016", "PAT-018", "PAT-019"]
+    l0_abstract: "Made the SCRIBE bundle rootless and self-contained by default."
+    pourquoi: "The user correctly identified that active root `scribe` and `scripts/` contradicted the portability goal and misled multiple LLM agents into treating the project root as the implementation surface. Adding a bundle-local CLI, making the installer rootless by default, and rewriting the managed instructions gives every agent one canonical path while preserving explicit legacy adapter generation for projects that need it."
+    validations:
+      - "filesystem check: root `scribe` false, root `scripts/` false, bundle `scribe` true"
+      - "scribe install .: updated AGENTS.md and .graphifyignore without recreating root adapters"
+      - "scribe install . --dry-run: AGENTS.md and .graphifyignore unchanged"
+      - "unittest discover: 35 tests passed"
+      - "py_compile: bundle scripts and tests compiled; generated __pycache__ removed afterwards"
+      - "scribe stats: 74 entities before this memory delta, 0 doctor errors, 5 legacy warnings"
+      - "scribe doctor --suggest-fix: 0 errors, 5 legacy warnings"
+      - "scribe context --mode quick --topic bundle portable rootless --format json: returned SCAR-001, VAC-006, and PAT-006"
+      - "scribe eval --query bundle identity drift --expect SCAR-001: pass_rate 100%"
+      - "root .graphifyignore no longer lists root scripts or root scribe"
+    scribe_delta: "VAC-005 | VAC-006 | PAT-019 | JOURNAL-038"
+  - id: "JOURNAL-039"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["VAC-005", "VAC-006", "PAT-006", "PAT-019", "PAT-020", "SCAR-001"]
+    l0_abstract: "Inspected the rootless migration diff and formalized the multi-agent installation procedure."
+    pourquoi: "The global diff is a structural migration with root adapter removal, old bundle deletion, new bundle source, and managed agent instructions. Formalizing the install and handoff procedure prevents future agents from reconstructing the protocol from a noisy diff and gives multi-agent sessions one shared bootstrap checklist."
+    validations:
+      - "git diff --stat and name-status inspected: migration deletes old bundle/root adapters and adds the new rootless bundle as untracked source"
+      - "docs/multi-agent-installation.md added with rootless install, legacy opt-in, agent bootstrap, async coordination, acceptance, and recovery sections"
+      - "AGENTS.md regenerated through scribe install and now links the multi-agent procedure"
+      - "README.md and docs/AGENTS.md link the multi-agent procedure"
+      - "unit test binds docs/multi-agent-installation.md and generated AGENTS guidance to bundle identity"
+      - "unittest discover: 35 tests passed"
+      - "py_compile: 28 files compiled to /tmp/scribe-pycompile"
+      - "scribe install . --dry-run: AGENTS.md and .graphifyignore unchanged"
+    scribe_delta: "PAT-020 | JOURNAL-039"
+  - id: "JOURNAL-040"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["VAC-005", "VAC-006", "PAT-006", "PAT-019", "PAT-020", "PAT-021"]
+    l0_abstract: "Removed materialized legacy adapter scripts from the rootless bundle to enforce DRY."
+    pourquoi: "The user caught that `adapters/root/scripts` and canonical `scripts` had the same filenames, creating the impression of duplicate implementations. Since the installer already renders root adapters from templates on `--with-root-adapters`, storing generated adapter files inside the bundle is unnecessary duplication and a multi-agent confusion source."
+    validations:
+      - "adapters/root removed; adapters/README.md now documents generated-adapter policy"
+      - "README.md and multi-agent installation docs now state generated adapters must not be stored in the bundle"
+      - "test_bundle_identity_matches_adapter_paths now asserts adapters/root/scripts is absent"
+      - "VAC-005 and VAC-006 antidotes updated to template-generated adapters only"
+      - "unittest discover: 35 tests passed"
+      - "scribe install . --dry-run: AGENTS.md and .graphifyignore unchanged"
+      - "temporary `--with-root-adapters` install: root scribe true, root scripts true, bundle adapter tree false"
+      - "bad-path scan: no __pycache__, .pyc, adapters/root/scripts, or adapters/root/scribe"
+      - "scribe eval generated adapters are not source --expect PAT-021: pass_rate 100%"
+    scribe_delta: "VAC-005 | VAC-006 | PAT-021 | JOURNAL-040"
+  - id: "JOURNAL-041"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-004", "PAT-003", "PAT-012"]
+    l0_abstract: "Eliminated the remaining Graphify hook broken-pipe recurrence path across active Gemini and Graphify templates."
+    pourquoi: "The project Codex hook already consumed stdin, but two installed Graphify Gemini templates and the global Gemini trusted hook registry still used an echo-only allow command. A hook command that can exit without reading stdin recreates the same BeforeToolUse broken-pipe failure after reinstall or in another agent host, so the safe contract is now stdin consumption before any allow response."
+    validations:
+      - "project .codex/hooks.json: PreToolUse command consumes stdin and simulation exits 0 with empty stdout/stderr"
+      - "Graphify templates patched in user site-packages and pipx site-packages"
+      - "global ~/.gemini/trusted_hooks.json graphify command consumes stdin and returns JSON allow"
+      - "graphify codex install regenerated a stdin-safe project PreToolUse hook"
+      - "legacy echo-only Gemini allow command scan: no matches in active Graphify/Gemini surfaces"
+      - "scribe doctor --suggest-fix before edit: 0 errors, 5 legacy warnings"
+    scribe_delta: "VAC-004 | JOURNAL-041"
+  - id: "JOURNAL-042"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-004", "JOURNAL-041", "PAT-012"]
+    l0_abstract: "Engraved the Graphify upstream reinstall caveat into the portable SCRIBE bundle rules."
+    pourquoi: "The local Broken pipe fix is only production-complete if future agents remember that an upstream Graphify reinstall can overwrite patched templates. Putting the caveat in the bundle README and AGENTS rules makes the recurrence guard travel with the reusable SCRIBE/TENOR workflow instead of living only in one session transcript."
+    validations:
+      - "bundle README points future agents to Graphify hook hardening rules"
+      - "bundle docs/AGENTS.md states Graphify reinstall/upgrade is a recurrence risk until stdin-consuming templates are reverified"
+      - "bundle docs/AGENTS.md requires Codex and Gemini hook simulation after Graphify reinstall or upgrade"
+    scribe_delta: "JOURNAL-042"
+  - id: "JOURNAL-043"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-004", "JOURNAL-041", "JOURNAL-042", "PAT-012", "PAT-022"]
+    l0_abstract: "Added an executable Graphify hook guard and upstreamable patch to the SCRIBE bundle."
+    pourquoi: "The remaining production gap was that a future Graphify reinstall from upstream could overwrite local site-packages edits. A bundle command, patch file, generated-agent instruction, and unit tests make the fix discoverable, repeatable, and enforceable by future LLM agents even without relying on session memory."
+    validations:
+      - "scribe graphify-hooks: PASS on active installed templates and hooks"
+      - "unittest discover: 37 tests passed, including Graphify hook guard apply/no-apply coverage"
+      - "py_compile: bundle CLI, guard script, template script, and new tests compiled"
+      - "scribe install .: regenerated AGENTS.md with graphify-hooks guidance"
+      - "scribe doctor --suggest-fix: 0 errors, 5 legacy warnings"
+    scribe_delta: "PAT-022 | JOURNAL-043"
+  - id: "JOURNAL-044"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-004", "SCAR-002", "PAT-022", "JOURNAL-043"]
+    l0_abstract: "Prepared the Graphify upstream hook patch and preserved it in the SCRIBE bundle."
+    pourquoi: "A local guard prevents recurrence in this workspace, but true production completion needs upstream to stop shipping hooks that return before reading stdin or depend on a `python` executable that may not exist. The preserved upstream diff keeps the PR-ready change available even without `gh` or push credentials."
+    validations:
+      - "upstream clone diff updates Gemini hook to consume stdin and use sys.executable"
+      - "upstream clone diff updates graphify hook-check to consume stdin before silent exit"
+      - "upstream clone adds regression tests for large stdin and Gemini allow command"
+      - "py_compile: upstream Graphify CLI and modified tests compiled"
+      - "manual hook simulations: Codex hook-check and Gemini command PASS"
+      - "bundle unittest discover: 40 tests passed after rerun"
+      - "uv pytest: blocked by PyPI timeout while fetching yt-dlp, not by code assertion"
+    scribe_delta: "JOURNAL-044"
+  - id: "JOURNAL-045"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["SCAR-001", "SCAR-002", "GHOST-002", "VAC-004", "VAC-005", "VAC-006", "PAT-003", "PAT-007", "PAT-012", "PAT-017", "PAT-019", "PAT-021"]
+    l0_abstract: "Stabilized SCRIBE Phase 1 with a local mutation lock, typed edge counters, PAT audit, and hot-tier reduction."
+    pourquoi: "The Claude critique was correct: a pattern-heavy hot tier and mixed consultation/journal/causal edges made the SCRIBE look more causal than it really was. The first safety move had to be write coordination, then rebalancing hot memory around proven scars, durable safeguards, and current multi-agent portability rules."
+    validations:
+      - "`scribe lock acquire/status/release` works with stale PID cleanup."
+      - "Mutating commands promote, compact, archive --apply, and review-hot --apply refuse without an active SCRIBE lock."
+      - "Unit tests: 40 passed after lock and typed-edge changes."
+      - "`scribe stats` reports causal/evidence/consultation/journal edge counters separately."
+      - "Hot tier reduced from 29 to 12 entries while preserving active SCARs, Graphify/rootless vaccines, and core retrieval/portable-bundle patterns."
+    scribe_delta: "SCAR-002 | GHOST-002 | JOURNAL-045 | hot-tier rebalance"
+  - id: "JOURNAL-046"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-002", "GHOST-003", "PAT-003", "PAT-007", "PAT-017", "PAT-020"]
+    l0_abstract: "Added shared SCRIBE state synchronization for Codex IDE, Codex CLI, and other local agents."
+    pourquoi: "The multi-agent failure mode was not only concurrent writes; it was stale context after another agent wrote first. A tiny state file with a real writer object, current SCRIBE hash, changed IDs, and closed write_kind enum gives each agent a cheap preflight check without pretending to be a full orchestrator."
+    validations:
+      - "`scribe sync` reports missing or stale state without overwriting the last writer."
+      - "`scribe sync --repair` atomically writes `scribe-out/state.json` with writer object, line count, hash, last session, changed IDs, and write_kind."
+      - "`scribe whoami` displays the recorded writer from state.json."
+      - "Doctor emits W011 for missing state, W012 for hash mismatch, and W013 for invalid write_kind."
+      - "Mutating SCRIBE commands update state.json after successful doctor validation while the lock is active."
+      - "Unit tests: 44 passed after state sync coverage."
+    scribe_delta: "GHOST-003 | JOURNAL-046 | state.json"
+  - id: "JOURNAL-047"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["GHOST-003", "GHOST-002", "PAT-003", "PAT-017"]
+    l0_abstract: "Validated the real Codex IDE versus Codex CLI stale-sync then repair scenario."
+    pourquoi: "A shared state file is only useful if it detects a stale SCRIBE before work continues and if repair records the real writer without letting a reader overwrite authorship. The scenario was run on a temporary SCRIBE copy to prove the failure and recovery path without risking canonical memory."
+    validations:
+      - "Canonical preflight: `scribe sync --agent codex-ide --type extension` reported IN_SYNC and preserved the existing TENOR writer."
+      - "Temporary codex-cli repair created a valid state file for the scenario SCRIBE copy."
+      - "After a simulated codex-ide write outside state, `scribe sync --agent codex-ide --type extension` returned STALE_HASH with last_writer still codex-cli."
+      - "Doctor on the stale temporary SCRIBE reported W012 state.json hash mismatch."
+      - "`scribe sync --repair --agent codex-ide --type extension --write-kind repair` restored IN_SYNC and reduced doctor warnings from 7 to 6."
+      - "A following codex-cli sync stayed IN_SYNC and still reported last_writer codex-ide, proving reader sync does not rewrite writer state."
+      - "Canonical SCRIBE remained IN_SYNC after the scenario and doctor stayed at 0 errors."
+    scribe_delta: "JOURNAL-047"
+  - id: "JOURNAL-048"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-003", "GHOST-002", "PAT-003", "PAT-017", "PAT-020", "PAT-021"]
+    l0_abstract: "Added portable bootstrap and generated-output cleanup for the SCRIBE bundle."
+    pourquoi: "The bundle was safer after lock and state sync, but still relied on humans or agents to know which generated files were disposable and how to initialize a copied `.agent` in a new project. `scribe clean` codifies retention, and `scribe bootstrap` makes a copied bundle self-initializing without embedding project-specific memory in `.agent`."
+    validations:
+      - "`scribe clean --dry-run --graphify` identified generated reports, validation exports, dashboard screenshots, commit-plan, and Graphify AST overflow without targeting active state or graph outputs."
+      - "`scribe clean --apply --graphify` removed 21 generated artifacts and left `scribe-out/` with only active dashboard, doctor report, state, and bundle graph outputs."
+      - "`scribe clean --apply --agent-cache` removed `.agent` __pycache__ directories after tests."
+      - "`scribe bootstrap --agent TENOR --type cli` was idempotent on the current project with unchanged AGENTS.md and .graphifyignore."
+      - "Empty-project copy test: copied `.agent` to /tmp, ran `scribe bootstrap`, created SCRIBE, AGENTS.md, .graphifyignore, scribe-out/state.json, and a Graphify placeholder because no app files existed."
+      - "Empty-project second bootstrap was idempotent and reported PROJET EXISTANT."
+      - "Unit tests: 51 passed with Python bytecode disabled."
+      - "`scribe install . --dry-run`: unchanged AGENTS.md and .graphifyignore."
+      - "`scribe clean --dry-run --graphify --agent-cache`: nothing to remove after cleanup."
+    scribe_delta: "PAT-023 | JOURNAL-048"
+  - id: "JOURNAL-049"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-003", "GHOST-002", "PAT-003", "PAT-007", "PAT-012", "PAT-017", "PAT-019", "VAC-004", "VAC-006"]
+    l0_abstract: "Added a precompiled quick context index and fixed Graphify hook verification before measuring honest smoke retrieval."
+    pourquoi: "The real bottleneck was not validation logic but parsing and importing the full SCRIBE memory stack for quick grounding; a tiny index-backed quick path preserves low-friction agent context while doctor and standard mode keep the full YAML parse. The smoke failure is kept visible because changing expectations to flatter the score would corrupt retrieval governance."
+    validations:
+      - "`graphify update .` completed without Broken pipe after the existing hook patches/guards were verified."
+      - "`scribe context --mode quick --topic 'graphify application bundle graph confusion'` used `scribe-out/scribe-index.json` fresh path and measured 0.18s with `/usr/bin/time` through the canonical bundle CLI."
+      - "Unit tests: `python3 -m unittest discover -s .agent/workflow/scribe-engineering-local-causal-retrieval/tests -p test_scribe_memory.py` passed 29 tests."
+      - "`scribe eval --smoke` ran four fixed real cases and exposed one remaining retrieval miss: PAT-023 is not retrieved for graphify app/bundle confusion."
+    scribe_delta: "DEBT-002 | JOURNAL-049 | scribe-index"
+  - id: "JOURNAL-050"
+    date: "2026-05-24"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["DEBT-002", "PAT-002", "PAT-012", "PAT-016", "PAT-023", "PAT-024", "VAC-006"]
+    l0_abstract: "Resolved the Graphify app-vs-bundle retrieval ambiguity with PAT-024 and the `bundle-graph` output name."
+    pourquoi: "PAT-023 correctly covers generated-output cleanup, not the architectural distinction between the host application's `graphify-out/` and the SCRIBE bundle's structural graph. Giving that distinction a dedicated hot PAT and renaming `scribe-out/graphify/` to `scribe-out/bundle-graph/` removes the ambiguity without weakening cleanup semantics or flattering retrieval metrics."
+    validations:
+      - "`scribe-out/graphify/` moved to `scribe-out/bundle-graph/`."
+      - "Code/docs/templates now point bundle Graphify output at `scribe-out/bundle-graph/`."
+      - "`scribe eval --smoke` expects PAT-024 for graphify app/bundle confusion."
+    scribe_delta: "PAT-024 | DEBT-002 REMBOURSEE | JOURNAL-050"
+  - id: "JOURNAL-051"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-006", "PAT-003", "GHOST-003", "PAT-019", "PAT-007"]
+    l0_abstract: "Removed stale host-level SCRIBE pointers and added an always-on SCRIBE rule for portable agents."
+    pourquoi: "A global host prompt can re-inject an archived SCRIBE path even after the local bundle is correct. Pointing `~/.gemini/GEMINI.md`, `AGENTS.md`, installer templates, and `.agent/rules/scribe.md` at the canonical bundle prevents future agents from reading the legacy protocol or inventing memory from stale paths."
+    validations:
+      - "`~/.gemini/GEMINI.md` now points to `docs/scribe.md`, the bundle-local `scribe` CLI, and `.agent/rules/scribe.md`."
+      - "Installer/bootstrap now writes `.agent/rules/scribe.md` into target projects."
+      - "`rg` finds the legacy workflow path only inside explicit do-not-use warnings."
+      - "54 SCRIBE unit tests pass."
+      - "`scribe doctor --suggest-fix` reports 0 errors."
+    scribe_delta: "VAC-006 | JOURNAL-051 | template_source"
+  - id: "JOURNAL-052"
+    date: "2026-05-24"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-006", "PAT-024", "GHOST-003", "GHOST-002", "SCAR-002"]
+    l0_abstract: "Fixed the Next.js 16 Turbopack localhost font loader failure."
+    pourquoi: "`next/font/google` generated an internal Turbopack CSS font URL that the current frontend setup could not resolve. Moving the font variables into CSS removes the failing internal module path while preserving Tailwind font tokens and keeping the layout server component simple."
+    validations:
+      - "`rg` finds no remaining `next/font` usage in the frontend."
+      - "`npm run lint` passes."
+      - "`env PATH=/home/jack-josias/.nvm/versions/node/v20.20.0/bin:... npm run build` passes with Next.js 16.2.6."
+      - "`curl -I http://localhost:3000/` returns a Next.js 307 redirect to `/login`, not the Turbopack error page."
+      - "`graphify update .` rebuilt the application graph."
+    scribe_delta: "VAC-007 | JOURNAL-052"
+  - id: "JOURNAL-053"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-006", "PAT-024", "GHOST-003", "GHOST-002", "SCAR-002"]
+    l0_abstract: "Suppressed extension-caused hydration mismatch noise on the Next.js login page."
+    pourquoi: "The mismatch diff contained extension attributes, not nondeterministic app state. `next/script` was too late in the dev overlay path, so the cleanup now runs as a direct inline `<head>` script before body parsing while keeping SSR and the existing login/register UI intact."
+    validations:
+      - "`npm run lint` passes."
+      - "`env PATH=/home/jack-josias/.nvm/versions/node/v20.20.0/bin:... npm run build` passes."
+      - "`curl -I http://localhost:3000/login` returns 200 OK."
+      - "Served `/login` HTML places the `extension-hydration-cleanup` script in `<head>` before `<body>`."
+      - "`graphify update .` rebuilt the application graph."
+    scribe_delta: "VAC-008 | JOURNAL-053"
+  - id: "JOURNAL-054"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-006", "PAT-024", "GHOST-003", "GHOST-002", "SCAR-002"]
+    l0_abstract: "Improved the static SCRIBE dashboard with an Apple-style local animated background."
+    pourquoi: "The requested visual polish had to live in the deterministic dashboard generator, not only in the generated HTML, so future `scribe dashboard` runs preserve the offline no-CDN contract while keeping the background animation local and respectful of reduced-motion preferences."
+    validations:
+      - "`scribe dashboard` regenerated the static HTML and JSON payload."
+      - "Embedded dashboard JavaScript passes `node --check` after extraction."
+      - "Full SCRIBE bundle unittest discovery passes: 54 tests."
+      - "Chromium headless generated a nonblank dashboard screenshot."
+      - "`scribe graph --build` rebuilt the bundle graph under `scribe-out/bundle-graph/`."
+    scribe_delta: "JOURNAL-054"
+  - id: "JOURNAL-055"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-007", "PAT-019", "VAC-006", "PAT-012", "PAT-024"]
+    l0_abstract: "Made the SCRIBE dashboard dark by default with a persistent light/dark toggle."
+    pourquoi: "The visual layer should support operator preference without losing the deterministic offline dashboard contract; defaulting to dark matches the requested production-console feel, while a localStorage-backed toggle keeps the same static HTML usable in bright environments."
+    validations:
+      - "scribe dashboard regenerated the HTML with data-theme dark, theme buttons, and no external HTTPS assets."
+      - "Embedded dashboard JavaScript passes node --check after extraction."
+      - "Full SCRIBE bundle unittest discovery passes: 54 tests."
+      - "Chromium headless generated a nonblank dark-default screenshot with mean RGB near 26/32/46."
+      - "scribe graph --build rebuilt the bundle graph under scribe-out/bundle-graph."
+    scribe_delta: "JOURNAL-055"
+  - id: "JOURNAL-056"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-007", "PAT-019", "VAC-006", "PAT-012", "PAT-024", "GHOST-003"]
+    l0_abstract: "Hardened SCRIBE observability with complete index v3, stale warm-PAT audit, and dashboard recommendations."
+    pourquoi: "The remaining production risk was not another manual dashboard polish pass; it was the absence of mechanical pressure against silent memory drift. The index now carries enough normalized state for fast query/stats/dashboard use, doctor exposes stale warm PATs without SCAR/GHOST as W014 after 20 sessions, and the dashboard shows concrete next actions so operators do not confuse health visualization with a work plan."
+    validations:
+      - "Python bytecode compilation passed for the modified SCRIBE modules."
+      - "Full SCRIBE bundle unittest discovery passed: 56 tests."
+      - "`scribe stats` rebuilt `scribe-out/scribe-index.json` as index_version 3 with index_complete true."
+      - "`scribe doctor --suggest-fix` reports 0 errors and 7 warnings, including the intentional W014 causal-audit warning."
+      - "`scribe query \"portable bootstrap clean generated noise\" --limit 3` used the fresh index and returned PAT-023 first."
+      - "`scribe eval --smoke` passed 4/4 real smoke cases with 100% pass rate."
+      - "`scribe dashboard` regenerated the static HTML/JSON with six charts and an Actions recommandees panel."
+      - "Chrome headless rendered `/tmp/scribe-dashboard-actions.png`; the visual check shows the six charts and recommendations panel without blank space collapse."
+      - "`scribe graph --build` rebuilt the bundle graph under `scribe-out/bundle-graph/`."
+      - "`git diff --check` passed."
+    scribe_delta: "JOURNAL-056 | scribe-index-v3 | W014 | dashboard recommendations"
+  - id: "JOURNAL-057"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["VAC-006", "PAT-024", "GHOST-003", "GHOST-002", "SCAR-002", "DEBT-001"]
+    l0_abstract: "Applied the clean-architecture Next.js workflow to restructure the JJK Messenger frontend progressively."
+    pourquoi: "The frontend had heavy client route files and direct technical imports in `src/app`; applying the pack safely required moving interaction into `core/presentation`, isolating Redux/RTK Query/realtime/browser storage in `core/infrastructure`, creating domain/application contracts for auth, and keeping legacy re-export adapters so the migration does not break hidden imports."
+    validations:
+      - "`npx next typegen` generated route types successfully."
+      - "`npm run lint` passed after fixing React 19 hook/ref and JSX text issues."
+      - "`npx tsc --noEmit` passed."
+      - "`npm run build` passed with Next.js 16.2.6 and routes /, /login, /register, /dashboard."
+      - "`git diff --check` passed."
+      - "`graphify update .` rebuilt the application graph to 220 nodes and 160 edges."
+      - "`curl -I http://localhost:3000/login` returned 200 OK on the already-running dev server."
+      - "Chromium headless rendered `/login` nonblank at 1365x768."
+    scribe_delta: "GHOST-004 | DEBT-003 | JOURNAL-057"
+  - id: "JOURNAL-058"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["VAC-006", "PAT-024", "GHOST-003", "GHOST-002", "SCAR-002", "DEBT-003", "DEBT-001"]
+    l0_abstract: "Repaid DEBT-003 by migrating auth to HttpOnly cookie sessions with refresh rotation, CSRF, and origin enforcement."
+    pourquoi: "The clean-architecture migration intentionally isolated auth storage first; the next production step was to stop trusting browser JavaScript with bearer secrets while preserving the existing direct REST and Socket.IO topology. The chosen cookie-backed boundary keeps compatibility, limits refresh-token replay through family revocation, and lets the frontend hydrate session state without localStorage or Redux token exposure."
+    validations:
+      - "npx prisma generate passed after adding RefreshToken schema and migration."
+      - "backend npm run build passed."
+      - "frontend npx next typegen passed."
+      - "frontend npm run lint passed."
+      - "frontend npx tsc --noEmit passed."
+      - "frontend npm run build passed with routes /, /login, /register, /dashboard."
+      - "frontend token grep shows no bearer token persistence outside legacy localStorage cleanup names and CSRF header naming."
+      - "graphify update . rebuilt the application graph to 259 nodes and 195 edges."
+      - "git diff --check passed."
+      - "curl -I http://localhost:3000/login returned 200 OK on the running dev server."
+    scribe_delta: "GHOST-005 | DEBT-003 REMBOURSEE | JOURNAL-058"
+  - id: "JOURNAL-059"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-008", "VAC-006", "PAT-024", "GHOST-003", "SCAR-002"]
+    l0_abstract: "Fixed the persistent extension hydration mismatch by removing the manual root-layout head script."
+    pourquoi: "The reported diff showed React comparing the app-owned inline cleanup script with a `chrome-extension://eppiocem...` script injected by the browser extension. The previous mitigation was directionally right about extension mutation but wrong about placing an app script in `<head>`; Next App Router root layouts should avoid manual head nodes, and the safer app-side boundary is a null-rendering client sanitizer inside `<body>` plus root suppressHydrationWarning."
+    validations:
+      - "Next local layout documentation checked: root layouts define html/body and should not manually add head tags."
+      - "Removed manual `<head>` and `extension-hydration-cleanup` script from app/layout.tsx."
+      - "Added ExtensionDomSanitizer client component scoped to known bis attributes and the observed extension script signature."
+      - "frontend npm run lint passed."
+      - "frontend npx tsc --noEmit passed."
+      - "frontend npm run build passed."
+      - "curl -I http://localhost:3000/login returned 200 OK."
+      - "graphify update . rebuilt the application graph to 265 nodes and 203 edges."
+      - "git diff --check passed."
+    scribe_delta: "VAC-008 | JOURNAL-059"
 metrics:
-  sessions_total: 36
-  scars_total: 0
-  vaccins_actifs: 5
+  sessions_total: 59
+  scars_total: 2
+  vaccins_actifs: 8
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 11
-    STANDARD: 22
+    CRITICAL: 22
+    STANDARD: 34
     QUICK: 3
   dette_p0_p1_courante: 1
   dezoom_total: 0
@@ -1061,5 +1863,5 @@ metrics:
   torvalds_items_traites: 0
   taux_completion_prod_moyenne: 0.0
   delta_feuille_vs_prod_moyen: 0.0
-  graphify_queries_total: 15
-  tokens_saved_via_graphify: 71000
+  graphify_queries_total: 34
+  tokens_saved_via_graphify: 128900

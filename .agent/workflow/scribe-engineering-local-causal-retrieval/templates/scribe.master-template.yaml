@@ -1,0 +1,70 @@
+schema_version: "TENOR_SCRIBE_v3.2"
+meta_project:
+  project_name: "{{PROJECT_NAME}}"
+  stack: "{{STACK}}"
+  initialized_at: "{{TIMESTAMP}}"
+  scribe_version: "3.2-local-causal-retrieval"
+  graphify_graph: "graphify-out/graph.json"
+tiers:
+  hot: ["PAT-GRAPH-001"]
+  warm: []
+  cold: []
+invariants:
+  - id: "INV-F001"
+    status: "ACTIVE"
+    tier: "hot"
+    titre: "Graphify before codebase work"
+    l0_abstract: "Read graphify-out/GRAPH_REPORT.md before architecture, dependency, or blast-radius work when it exists."
+  - id: "INV-F002"
+    status: "ACTIVE"
+    tier: "hot"
+    titre: "SCRIBE stores causal memory only"
+    l0_abstract: "Write decisions, failures, rejected options, and learned safeguards in SCRIBE; leave structural facts to Graphify."
+  - id: "INV-F003"
+    status: "ACTIVE"
+    tier: "hot"
+    titre: "Anti-drift closing question"
+    l0_abstract: "Before closing a real coding session, ask what will hurt the next LLM if undocumented; concrete future pain becomes SCAR or GHOST, otherwise JOURNAL is enough."
+patterns:
+  - id: "PAT-GRAPH-001"
+    date: "{{DATE}}"
+    schema_patch_date: "{{DATE}}"
+    tier: "hot"
+    status: "ACTIVE"
+    titre: "Graphify and SCRIBE separation"
+    l0_abstract: "Use Graphify for structural code facts and SCRIBE for causal project memory."
+    scope: "dev"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-000"
+      observable: "Bootstrap initialized a project with separate graphify-out, scribe-out, and SCRIBE memory surfaces."
+    liens_causaux:
+      source: "JOURNAL-000"
+journal:
+  - id: "JOURNAL-000"
+    date: "{{DATE}}"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-GRAPH-001"]
+    l0_abstract: "Bootstrap initial."
+    pourquoi: "This project received the portable SCRIBE/TENOR local causal retrieval bundle. Graphify owns structural retrieval; SCRIBE starts as a causal memory with only the minimum invariant seed."
+    scribe_delta: "PAT-GRAPH-001 | JOURNAL-000"
+metrics:
+  sessions_total: 1
+  scars_total: 0
+  vaccins_actifs: 0
+  taux_recidive: 0.0
+  bugs_prevenus_par_vaccin: 0
+  complexite_moyenne: 0.0
+  mode_distribution:
+    CRITICAL: 0
+    STANDARD: 1
+    QUICK: 0
+  dette_p0_p1_courante: 0
+  dezoom_total: 0
+  taux_dezoom_par_session: 0.0
+  torvalds_items_total: 0
+  torvalds_items_traites: 0
+  taux_completion_prod_moyenne: 0.0
+  delta_feuille_vs_prod_moyen: 0.0
+  graphify_queries_total: 0
+  tokens_saved_via_graphify: 0

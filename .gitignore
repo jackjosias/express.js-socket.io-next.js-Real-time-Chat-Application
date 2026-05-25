@@ -42,6 +42,18 @@ scribe-out/
 .agent/workflow/scribe-engineering-rag/graphify-out/
 .agent/skills/graphify/.graphify_version
 
+# generated SCRIBE noise for projects that whitelist active scribe-out files
+scribe-out/scribe-doctor-before-*.md
+scribe-out/scribe-doctor-after-*.md
+scribe-out/scribe-doctor-shim-*.md
+scribe-out/scribe-export-*.json
+scribe-out/scribe-dashboard-*.png
+scribe-out/commit-plan/
+
+# graphify cache is reconstructible
+graphify-out/cache/
+scribe-out/bundle-graph/**/cache/
+
 # python caches
 __pycache__/
 *.py[cod]
