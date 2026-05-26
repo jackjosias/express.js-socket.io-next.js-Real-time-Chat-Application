@@ -10,13 +10,13 @@ sys.path.insert(0, str(SCRIPTS))
 from rag_challenge import challenge
 from rag_compact import format_results
 from rag_context import context
-from rag_index import build_index
+from rag_test_fixtures import build_auth_test_index
 from rag_scoring import retrieve
 
 class RagRetrievalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.index = build_index(force=True)
+        cls.index = build_auth_test_index()
 
     def ids(self, query: str):
         return [result.entity.get("id") for result in retrieve(query, self.index, top_k=5)]

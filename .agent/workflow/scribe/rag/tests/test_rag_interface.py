@@ -29,7 +29,7 @@ class RagInterfaceTests(unittest.TestCase):
         payload = export_scribe(include_values=True)
         self.assertIn("entities", payload)
         self.assertIsInstance(payload["entities"], list)
-        self.assertTrue(any(item.get("id") == "GHOST-005" for item in payload["entities"] if isinstance(item, dict)))
+        self.assertTrue(all(isinstance(item, dict) and item.get("id") for item in payload["entities"]))
 
     def test_whoami_reports_state_lock_and_index(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

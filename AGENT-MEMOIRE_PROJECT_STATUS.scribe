@@ -2781,15 +2781,38 @@ journal:
       surfaces_touched: ["scribe"]
       collisions_detected: 0
       stale_syncs: 0
+  - id: "JOURNAL-086"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    agent_type: "cli"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-011", "JOURNAL-085"]
+    l0_abstract: "Made scribe-rag tests host-memory independent for portable installs."
+    pourquoi: >
+      Porting SCRIBE into algowebsite exposed a real portability bug: the RAG unit tests expected jjk-messenger auth memories such as GHOST-005 and SCAR-003 to exist in the host SCRIBE.
+      The tests now use a local fixture index for retrieval/challenge semantics while the export contract test only verifies the generic JSON entity shape.
+      This keeps the same safety assertions without coupling the portable bundle to one project's memory contents.
+    validations:
+      - "SEL tests: `python3 -m unittest discover -s .agent/workflow/scribe/sel/tests` passed 61 tests."
+      - "RAG tests: `python3 -m unittest discover -s .agent/workflow/scribe/rag/tests` passed 14 tests."
+      - "scribe-rag eval: `.agent/workflow/scribe/scribe-rag eval --force` returned 8/8."
+      - "git diff --check returned OK."
+    scribe_delta: "JOURNAL-086 | host-independent RAG tests"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
 metrics:
-  sessions_total: 85
+  sessions_total: 86
   scars_total: 3
   vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 42
+    CRITICAL: 43
     STANDARD: 40
     QUICK: 3
   dette_p0_p1_courante: 0
