@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,50 @@ GENERATED_PREFIXES = (
 GENERATED_SUFFIXES = (".pyc", ".pyo", ".tsbuildinfo")
 SOURCE_HINT_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx", ".json", ".md", ".yml", ".yaml", ".toml", ".prisma")
 SOURCE_HINT_FILENAMES = {".graphifyignore", "root.graphifyignore", "scribe"}
+SURFACE_MAP = {
+    "auth": (
+        "src/auth/",
+        "src/middleware/",
+        "backend/src/domain/auth/",
+        "backend/src/application/auth/",
+        "backend/src/presentation/api/routes/auth",
+        "backend/src/presentation/api/middlewares/auth",
+    ),
+    "websocket": (
+        "src/websocket/",
+        "src/socket/",
+        "backend/src/presentation/websocket/",
+        "backend/src/socket/",
+    ),
+    "frontend": (
+        "frontend/src/",
+        "src/app/",
+        "src/core/",
+        "src/shared/",
+    ),
+    "tests": (
+        "tests/",
+        "backend/tests/",
+        "frontend/tests/",
+        "*.test.ts",
+        "*.test.tsx",
+        "*.spec.ts",
+        "*.spec.tsx",
+        "*.test.js",
+        "*.spec.js",
+    ),
+    "scribe": (
+        "AGENT-MEMOIRE_PROJECT_STATUS.scribe",
+        "AGENTS.md",
+        ".agent/",
+    ),
+    "orchestrator": (
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -73,6 +118,44 @@ def classify(items: list[StatusItem]) -> tuple[list[StatusItem], list[StatusItem
     return tracked, untracked_source, generated, other
 
 
+def matches_surface(path: str, pattern: str) -> bool:
+    normalized = path.lstrip("/")
+    if any(char in pattern for char in "*?["):
+        return fnmatch.fnmatch(normalized, pattern) or fnmatch.fnmatch(Path(normalized).name, pattern)
+    return normalized == pattern or normalized.startswith(pattern)
+
+
+def owned_surface(path: str) -> str | None:
+    for surface, patterns in SURFACE_MAP.items():
+        if any(matches_surface(path, pattern) for pattern in patterns):
+            return surface
+    return None
+
+
+def check_surface_violations(surface: str, agent_id: str, items: list[StatusItem] | None = None) -> list[dict[str, str]]:
+    changed_items = items if items is not None else git_status()
+    violations: list[dict[str, str]] = []
+    for item in changed_items:
+        if is_generated(item.path):
+            continue
+        owner = owned_surface(item.path)
+        if owner and owner != surface:
+            violations.append({"file": item.path, "belongs_to": owner, "claimed_by": agent_id})
+    return violations
+
+
+def print_surface_violations(violations: list[dict[str, str]], limit: int) -> None:
+    print(f"  surface_violations: {len(violations)}")
+    for violation in violations[:limit]:
+        print(
+            "  BLOCK "
+            f"{violation['file']} belongs_to={violation['belongs_to']} "
+            f"claimed_by={violation['claimed_by']}"
+        )
+    if len(violations) > limit:
+        print(f"  ... {len(violations) - limit} more")
+
+
 def print_group(title: str, items: list[StatusItem], limit: int) -> None:
     print(f"{title}: {len(items)}")
     for item in items[:limit]:
@@ -85,7 +168,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="scribe worktree", description="Classify Git worktree changes for agents.")
     parser.add_argument("--strict", action="store_true", help="Fail when tracked or untracked source changes exist.")
     parser.add_argument("--limit", type=int, default=40, help="Maximum rows per group.")
+    parser.add_argument("--surface", choices=sorted(SURFACE_MAP), help="Exclusive surface claimed by this agent.")
+    parser.add_argument("--agent", help="Agent identifier used in surface violation reports.")
     args = parser.parse_args()
+    if bool(args.surface) != bool(args.agent):
+        parser.error("--surface and --agent must be used together")
 
     items = git_status()
     tracked, untracked_source, generated, other = classify(items)
@@ -95,7 +182,13 @@ def main() -> int:
     print_group("  untracked_source_candidates", untracked_source, args.limit)
     print_group("  generated_noise", generated, args.limit)
     print_group("  other_untracked", other, args.limit)
+    surface_violations = check_surface_violations(args.surface, args.agent, tracked + untracked_source) if args.surface else []
+    if args.surface:
+        print_surface_violations(surface_violations, args.limit)
 
+    if surface_violations:
+        print("  verdict: SURFACE_VIOLATION")
+        return 1
     if args.strict and (tracked or untracked_source):
         print("  verdict: DIRTY")
         return 1

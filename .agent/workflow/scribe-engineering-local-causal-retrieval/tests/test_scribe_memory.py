@@ -598,6 +598,46 @@ class ScribeMemoryCommandTests(unittest.TestCase):
         self.assertEqual([entry.path for entry in generated], ["scribe-out/report.md"])
         self.assertEqual(other, [])
 
+    def test_worktree_detects_surface_violations(self) -> None:
+        worktree = load_script_module("scribe_worktree")
+        item = getattr(worktree, "StatusItem")
+        check_surface_violations = getattr(worktree, "check_surface_violations")
+
+        violations = check_surface_violations(
+            "auth",
+            "agent-a",
+            [
+                item(" M", "src/auth/login.ts"),
+                item(" M", "src/websocket/server.ts"),
+                item(" M", "frontend/src/App.tsx"),
+                item("??", "scribe-out/report.md"),
+            ],
+        )
+
+        self.assertEqual(
+            violations,
+            [
+                {"file": "src/websocket/server.ts", "belongs_to": "websocket", "claimed_by": "agent-a"},
+                {"file": "frontend/src/App.tsx", "belongs_to": "frontend", "claimed_by": "agent-a"},
+            ],
+        )
+
+    def test_worktree_allows_claimed_surface_changes(self) -> None:
+        worktree = load_script_module("scribe_worktree")
+        item = getattr(worktree, "StatusItem")
+        check_surface_violations = getattr(worktree, "check_surface_violations")
+
+        violations = check_surface_violations(
+            "tests",
+            "agent-tests",
+            [
+                item(" M", "backend/tests/auth.test.ts"),
+                item("??", "src/session.spec.ts"),
+            ],
+        )
+
+        self.assertEqual(violations, [])
+
     def test_bundle_identity_matches_adapter_paths(self) -> None:
         install = load_script_module("scribe_install")
         templates = load_script_module("scribe_install_templates")
