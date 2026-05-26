@@ -65,3 +65,5 @@ __pycache__/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# generated/imported design-system scratch artifacts
+stitch_livro_neo_local_design_system*
