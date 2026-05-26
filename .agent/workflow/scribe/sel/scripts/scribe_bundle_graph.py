@@ -9,8 +9,18 @@ import tempfile
 from pathlib import Path
 
 
-BUNDLE_ROOT = Path(__file__).resolve().parents[1]
-PROJECT_ROOT = BUNDLE_ROOT.parents[2]
+SEL_ROOT = Path(__file__).resolve().parents[1]
+BUNDLE_ROOT = SEL_ROOT.parent
+
+
+def find_project_root(path: Path) -> Path:
+    for ancestor in path.parents:
+        if ancestor.name == ".agent":
+            return ancestor.parent
+    raise RuntimeError(f"Cannot resolve project root from {path}")
+
+
+PROJECT_ROOT = find_project_root(BUNDLE_ROOT)
 BUNDLE_GRAPH_DIR = PROJECT_ROOT / "scribe-out" / "bundle-graph" / BUNDLE_ROOT.name
 DEFAULT_BUDGET = 1200
 GRAPH_SKIP_DIRS = {"adapters", "graphify-out", "__pycache__", ".pytest_cache", ".mypy_cache", "vendor"}

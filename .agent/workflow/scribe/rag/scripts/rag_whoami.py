@@ -48,7 +48,7 @@ def format_whoami(
     lines.extend(
         [
             f"Index mode  : {index.get('mode', 'absent')}",
-            "Eval status : run scribe-rag eval --force",
+            "Eval status : run .agent/workflow/scribe/scribe-rag eval --force",
         ]
     )
     return "\n".join(lines) + "\n"

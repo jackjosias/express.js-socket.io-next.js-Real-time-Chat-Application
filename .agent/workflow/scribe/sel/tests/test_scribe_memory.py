@@ -581,18 +581,18 @@ class ScribeMemoryCommandTests(unittest.TestCase):
         tracked, source, generated, other = classify([
             item(" M", "README.md"),
             item("??", "scribe-out/report.md"),
-            item("??", ".agent/workflow/scribe-engineering-local-causal-retrieval/scripts/tool.py"),
-            item("??", ".agent/workflow/scribe-engineering-local-causal-retrieval/templates/root.graphifyignore"),
-            item("??", ".agent/workflow/scribe-engineering-local-causal-retrieval/docs/archive/scribe.v3.1.md.old"),
+            item("??", ".agent/workflow/scribe/sel/scripts/tool.py"),
+            item("??", ".agent/workflow/scribe/sel/templates/root.graphifyignore"),
+            item("??", ".agent/workflow/scribe/sel/docs/archive/scribe.v3.1.md.old"),
         ])
 
         self.assertEqual([entry.path for entry in tracked], ["README.md"])
         self.assertEqual(
             [entry.path for entry in source],
             [
-                ".agent/workflow/scribe-engineering-local-causal-retrieval/scripts/tool.py",
-                ".agent/workflow/scribe-engineering-local-causal-retrieval/templates/root.graphifyignore",
-                ".agent/workflow/scribe-engineering-local-causal-retrieval/docs/archive/scribe.v3.1.md.old",
+                ".agent/workflow/scribe/sel/scripts/tool.py",
+                ".agent/workflow/scribe/sel/templates/root.graphifyignore",
+                ".agent/workflow/scribe/sel/docs/archive/scribe.v3.1.md.old",
             ],
         )
         self.assertEqual([entry.path for entry in generated], ["scribe-out/report.md"])
@@ -643,7 +643,7 @@ class ScribeMemoryCommandTests(unittest.TestCase):
         templates = load_script_module("scribe_install_templates")
         bundle_graph = load_script_module("scribe_bundle_graph")
 
-        expected_name = "scribe-engineering-local-causal-retrieval"
+        expected_name = "scribe"
         expected_path = f".agent/workflow/{expected_name}"
         adapter = getattr(templates, "render_scribe_adapter")()
         shim = getattr(templates, "render_shim_helper")()
@@ -652,10 +652,12 @@ class ScribeMemoryCommandTests(unittest.TestCase):
 
         self.assertEqual(BUNDLE_ROOT.name, expected_name)
         self.assertTrue((BUNDLE_ROOT / "scribe").is_file())
-        self.assertTrue((BUNDLE_ROOT / "scripts").is_dir())
-        self.assertTrue((BUNDLE_ROOT / "docs" / "multi-agent-installation.md").is_file())
-        self.assertTrue((BUNDLE_ROOT / "adapters" / "README.md").is_file())
-        self.assertFalse((BUNDLE_ROOT / "adapters" / "root" / "scripts").exists())
+        self.assertTrue((BUNDLE_ROOT / "scribe-rag").is_file())
+        self.assertTrue((BUNDLE_ROOT / "sel" / "scripts").is_dir())
+        self.assertTrue((BUNDLE_ROOT / "rag" / "scripts").is_dir())
+        self.assertTrue((BUNDLE_ROOT / "sel" / "docs" / "multi-agent-installation.md").is_file())
+        self.assertTrue((BUNDLE_ROOT / "sel" / "adapters" / "README.md").is_file())
+        self.assertFalse((BUNDLE_ROOT / "sel" / "adapters" / "root" / "scripts").exists())
         self.assertEqual(str(getattr(install, "BUNDLE_RELATIVE_PATH")), expected_path)
         self.assertIn("multi-agent-installation.md", agents_block)
         self.assertIn("Default commit/push scope is the host product source", agents_block)
@@ -668,6 +670,7 @@ class ScribeMemoryCommandTests(unittest.TestCase):
         self.assertIn("bundle-graph", graph_dir.parts)
         self.assertEqual(graph_dir.name, expected_name)
         self.assertNotIn("scribe-engineering-rag", adapter + shim)
+        self.assertNotIn("scribe-engineering-local-causal-retrieval", adapter + shim)
 
     def test_install_is_rootless_by_default(self) -> None:
         install = load_script_module("scribe_install")

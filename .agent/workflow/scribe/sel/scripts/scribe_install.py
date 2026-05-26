@@ -27,7 +27,8 @@ from scribe_install_templates import (
 )
 
 
-BUNDLE_RELATIVE_PATH = Path(".agent") / "workflow" / "scribe-engineering-local-causal-retrieval"
+PORTABLE_RELATIVE_PATH = Path(".agent") / "workflow" / "scribe"
+BUNDLE_RELATIVE_PATH = PORTABLE_RELATIVE_PATH
 SKIPPED_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", "graphify-out"}
 SKIPPED_SUFFIXES = {".pyc", ".pyo"}
 
@@ -285,7 +286,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    source_bundle = Path(__file__).resolve().parents[1]
+    source_bundle = Path(__file__).resolve().parents[2]
     target_root = Path(args.target_path)
     installer = Installer(source_bundle, target_root, force=args.force, dry_run=args.dry_run, with_root_adapters=args.with_root_adapters)
     return installer.run()

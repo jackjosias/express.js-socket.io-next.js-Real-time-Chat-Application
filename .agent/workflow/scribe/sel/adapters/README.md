@@ -6,7 +6,7 @@ Root `scribe` and root `scripts/` are legacy compatibility outputs generated
 only by:
 
 ```bash
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe install . --with-root-adapters
+.agent/workflow/scribe/scribe install . --with-root-adapters
 ```
 
 Canonical source lives in:

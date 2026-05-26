@@ -6,8 +6,9 @@ from pathlib import Path
 from types import ModuleType
 
 
-BUNDLE_ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS_DIR = BUNDLE_ROOT / "scripts"
+SEL_ROOT = Path(__file__).resolve().parents[1]
+BUNDLE_ROOT = SEL_ROOT.parent
+SCRIPTS_DIR = SEL_ROOT / "scripts"
 sys.dont_write_bytecode = True
 
 SCRIBE_FIXTURE = """schema_version: "TENOR_SCRIBE_v1"

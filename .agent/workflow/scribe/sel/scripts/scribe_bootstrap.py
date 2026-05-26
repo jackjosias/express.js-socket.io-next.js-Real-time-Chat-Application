@@ -16,8 +16,10 @@ from scribe_install import Installer
 from scribe_state import AGENT_TYPES, check_sync, update_state_after_write
 
 
-BUNDLE_ROOT = Path(__file__).resolve().parents[1]
-BUNDLE_COMMAND = BUNDLE_ROOT / "scribe"
+SEL_ROOT = Path(__file__).resolve().parents[1]
+SCRIBE_ROOT = SEL_ROOT.parent
+BUNDLE_ROOT = SEL_ROOT
+BUNDLE_COMMAND = SCRIBE_ROOT / "scribe"
 SCRIBE_PATH = Path("AGENT-MEMOIRE_PROJECT_STATUS.scribe")
 TEMPLATE_PATH = BUNDLE_ROOT / "templates" / "scribe.master-template.yaml"
 AGENT_GITIGNORE = """__pycache__/
@@ -169,7 +171,7 @@ def default_runner(command: Sequence[str], cwd: Path) -> CommandResult:
 
 
 def run_installer(project_root: Path, dry_run: bool) -> int:
-    installer = Installer(BUNDLE_ROOT, project_root, force=True, dry_run=dry_run, with_root_adapters=False)
+    installer = Installer(SCRIBE_ROOT, project_root, force=True, dry_run=dry_run, with_root_adapters=False)
     return installer.run()
 
 

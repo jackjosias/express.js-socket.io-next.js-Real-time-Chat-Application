@@ -7,7 +7,8 @@ Purpose: install and operate the SCRIBE/TENOR local causal retrieval bundle in a
 From a host project root:
 
 ```bash
-SCRIBE=.agent/workflow/scribe-engineering-local-causal-retrieval/scribe
+SCRIBE=.agent/workflow/scribe/scribe
+SCRIBE_RAG=.agent/workflow/scribe/scribe-rag
 ```
 
 Rules:
@@ -24,7 +25,8 @@ Use this path for new projects and for multi-agent coding sessions:
 
 ```bash
 $SCRIBE bootstrap
-$SCRIBE context --mode quick --topic "project bootstrap"
+$SCRIBE_RAG build
+$SCRIBE_RAG context
 ```
 
 Expected result:
@@ -34,7 +36,7 @@ Expected result:
 - `scribe-out/state.json` exists and records the real bootstrap writer.
 - No root `scribe` file is created.
 - No root `scripts/` directory is created.
-- The active command remains `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe`.
+- The active command remains `.agent/workflow/scribe/scribe`.
 
 ## Legacy Adapter Install
 
@@ -49,7 +51,7 @@ Rules:
 - Treat generated root adapters as compatibility bridges only.
 - Do not edit root adapters by hand.
 - Keep canonical code changes inside the bundle.
-- Do not copy generated adapters back into `.agent/workflow/scribe-engineering-local-causal-retrieval/adapters/`.
+- Do not copy generated adapters back into `.agent/workflow/scribe/sel/adapters/`.
 - If root adapters are no longer needed, remove them as a deliberate migration and rerun the rootless install.
 
 ## Agent Bootstrap
@@ -60,7 +62,8 @@ Every agent that joins the project should run this sequence before editing:
 $SCRIBE bootstrap
 sed -n '1,220p' graphify-out/GRAPH_REPORT.md
 $SCRIBE sync --agent "<agent-name>" --type "<extension|cli|api|unknown>"
-$SCRIBE context --mode quick --topic "<assigned work>"
+$SCRIBE_RAG build
+$SCRIBE_RAG context
 $SCRIBE worktree
 ```
 
@@ -85,38 +88,39 @@ When several LLM agents work on the same repository:
 - SCRIBE memory is a locked surface: mutating commands and manual YAML edits require `$SCRIBE lock acquire` first.
 - Application code, SCRIBE bundle code, SCRIBE memory, and generated reports are separate surfaces.
 - No agent reverts files it did not intentionally change.
-- Before changing shared behavior, run `$SCRIBE challenge "<plan>"`.
+- Before changing shared behavior, run `$SCRIBE_RAG challenge "<plan>"`.
 - Before delivery, run `$SCRIBE worktree` and report tracked changes, untracked source candidates, generated noise, and other untracked files.
 - If the task changes bundle architecture, run `$SCRIBE graph --build`.
-- If the task changes retrieval ranking, tiers, or scoring, run `$SCRIBE eval` before and after the change.
+- If the task changes retrieval ranking, tiers, or scoring, run `$SCRIBE_RAG eval --force` before and after the change.
 
 ## Acceptance Checklist
 
 A portable installation is accepted only when all checks pass:
 
 ```bash
-test -f .agent/workflow/scribe-engineering-local-causal-retrieval/scribe
+test -f .agent/workflow/scribe/scribe
+test -f .agent/workflow/scribe/scribe-rag
 test ! -e scribe
 test ! -e scripts
 $SCRIBE install . --dry-run
 $SCRIBE clean --dry-run
 $SCRIBE doctor --suggest-fix
-$SCRIBE stats
-$SCRIBE context --mode quick --topic "bundle portable rootless" --format json
-$SCRIBE eval --query "bundle portable rootless" --expect PAT-019 --format text
+$SCRIBE_RAG build
+$SCRIBE_RAG context
+$SCRIBE_RAG eval --force
 git diff --check
 ```
 
 Expected acceptance:
 - install dry-run reports `unchanged AGENTS.md` and `unchanged .graphifyignore`;
 - doctor reports zero errors;
-- context and eval retrieve `PAT-019`, `VAC-005`, and `VAC-006`;
+- scribe-rag context runs and eval remains green;
 - no Python `__pycache__` or `.pyc` artifacts remain inside the bundle.
 
 ## Recovery
 
 If a project drifts:
-1. Run `$SCRIBE context --mode standard --topic "bundle identity drift"`.
+1. Run `$SCRIBE_RAG query "bundle identity drift"`.
 2. Verify whether root `scribe` or root `scripts/` exist.
 3. If they exist unintentionally, move their reusable contents under the bundle or remove generated adapters deliberately.
 4. Rerun `$SCRIBE install .`.

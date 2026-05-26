@@ -98,10 +98,16 @@ jobs:
           python-version: "3.12"
 
       - name: Run SCRIBE tests
-        run: python -m unittest discover -s .agent/workflow/scribe-engineering-local-causal-retrieval/tests
+        run: python -m unittest discover -s .agent/workflow/scribe/sel/tests
+
+      - name: Run SCRIBE-RAG tests
+        run: python -m unittest discover -s .agent/workflow/scribe/rag/tests
+
+      - name: Run SCRIBE-RAG eval
+        run: .agent/workflow/scribe/scribe-rag eval --force
 
       - name: Run SCRIBE doctor
-        run: .agent/workflow/scribe-engineering-local-causal-retrieval/scribe doctor --suggest-fix
+        run: .agent/workflow/scribe/scribe doctor --suggest-fix
 
       - name: Build SCRIBE bundle graph
-        run: .agent/workflow/scribe-engineering-local-causal-retrieval/scribe graph --build
+        run: .agent/workflow/scribe/scribe graph --build

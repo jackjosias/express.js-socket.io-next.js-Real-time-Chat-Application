@@ -17,7 +17,8 @@ class RagInterfaceTests(unittest.TestCase):
     def test_sel_cli_resolves_to_canonical_path(self) -> None:
         self.assertTrue(SEL_CLI.exists())
         self.assertEqual(SEL_CLI.name, "scribe")
-        self.assertIn("scribe-engineering-local-causal-retrieval", str(SEL_CLI))
+        self.assertIn(".agent/workflow/scribe/scribe", str(SEL_CLI))
+        self.assertNotIn("scribe-engineering-local-causal-retrieval", str(SEL_CLI))
 
     def test_sel_cli_not_from_path(self) -> None:
         path_scribe = shutil.which("scribe")

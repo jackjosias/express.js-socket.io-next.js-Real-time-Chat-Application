@@ -37,8 +37,8 @@
 #                                les surfaces sont une règle SCRIBE/protocole.
 #
 # COUCHE 2 — SEL (moteur interne uniquement)
-#   Dossier   : .agent/workflow/scribe-engineering-local-causal-retrieval/
-#   CLI       : .agent/workflow/scribe-engineering-local-causal-retrieval/scribe
+#   Dossier   : .agent/workflow/scribe/sel/
+#   CLI       : .agent/workflow/scribe/scribe
 #   Règle     : ne jamais appeler directement depuis AGENTS.md pour retrieval,
 #               contexte, query, explain ou challenge agent.
 #   Appelé par: scribe-rag via CLI canonique et export JSON.
@@ -51,8 +51,8 @@
 #     - écritures SCRIBE et garde-fous d'écriture
 #
 # COUCHE 3 — SCRIBE-RAG BM25 (seule interface agent)
-#   Dossier   : .agent/workflow/scribe-rag/
-#   CLI       : .agent/workflow/scribe-rag/scribe-rag
+#   Dossier   : .agent/workflow/scribe/rag/
+#   CLI       : .agent/workflow/scribe/scribe-rag
 #   Rôle      : toutes les lectures mémoire agent passent par scribe-rag.
 #   Commandes : build, context, query, explain, challenge, eval, doctor.
 #   Mode      : BM25 par défaut, portable, sans dépendance externe.

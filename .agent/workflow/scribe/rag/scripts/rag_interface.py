@@ -6,12 +6,30 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_PATH = Path(__file__).resolve()
+
+
+def find_project_root(path: Path) -> Path:
+    for ancestor in path.parents:
+        if ancestor.name == ".agent":
+            return ancestor.parent
+    raise RuntimeError(f"Cannot resolve project root from {path}")
+
+
+def find_portable_root(path: Path) -> Path:
+    for ancestor in path.parents:
+        if ancestor.name == "scribe" and ancestor.parent.name == "workflow":
+            if (ancestor / "sel" / "scribe").exists():
+                return ancestor
+    raise RuntimeError(f"Cannot resolve portable SCRIBE root from {path}")
+
+
 SCRIBE_RAG_ROOT = SCRIPT_PATH.parents[1]
-WORKFLOW_ROOT = SCRIPT_PATH.parents[2]
-PROJECT_ROOT = SCRIPT_PATH.parents[4]
-SEL_CLI = (WORKFLOW_ROOT / "scribe-engineering-local-causal-retrieval" / "scribe").resolve()
+SCRIBE_ROOT = find_portable_root(SCRIPT_PATH)
+PROJECT_ROOT = find_project_root(SCRIPT_PATH)
+SEL_CLI = (SCRIBE_ROOT / "scribe").resolve()
 DEFAULT_SCRIBE = PROJECT_ROOT / "AGENT-MEMOIRE_PROJECT_STATUS.scribe"
 RAG_INDEX_PATH = PROJECT_ROOT / "scribe-out" / "rag-index.json"
+
 
 class SELCommandError(RuntimeError):
     pass

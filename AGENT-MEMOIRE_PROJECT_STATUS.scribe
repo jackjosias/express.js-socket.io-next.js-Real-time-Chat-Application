@@ -2,7 +2,7 @@ schema_version: "TENOR_SCRIBE_v1"
 project: "JJK Messenger"
 last_update: "2026-05-26"
 created_at: "2026-05-20"
-template_source: ".agent/workflow/scribe-engineering-local-causal-retrieval/templates/scribe.master-template.yaml"
+template_source: ".agent/workflow/scribe/sel/templates/scribe.master-template.yaml"
 notes:
   - "SCRIBE initialized from a legacy-missing template situation, then migrated to the portable local causal retrieval bundle."
   - "Only causal memory belongs here; structural facts belong to Graphify when graphify-out is available."
@@ -27,6 +27,7 @@ tiers:
     - "GHOST-009"
     - "PAT-MA-001"
     - "GHOST-010"
+    - "GHOST-011"
   warm:
     - "GHOST-001"
     - "VAC-002"
@@ -1441,6 +1442,36 @@ ghosts:
     liens_causaux:
       source: "JOURNAL-080"
       renforce: ["GHOST-005", "PAT-027", "VAC-009"]
+  - id: "GHOST-011"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-26"
+    schema_patch_date: "2026-05-26"
+    titre: "Bundle SCRIBE portable mono-dossier"
+    l0_abstract: "Le workflow portable canonique est `.agent/workflow/scribe/`; copier ce seul dossier suffit pour bootstrapper SEL et scribe-rag dans un nouveau projet."
+    l2_details: >
+      La portabilité réelle exigeait une identité de bundle unique, pas deux dossiers voisins à déplacer ensemble.
+      Le nouveau root `.agent/workflow/scribe/` contient `sel/`, `rag/`, les wrappers racine `scribe` et `scribe-rag`, plus des shims de compatibilité sur les anciens chemins.
+      Les résolveurs RAG cherchent désormais le root portable par structure `.agent/workflow/scribe`, SEL bootstrap installe ce root entier dans les projets hôtes, et les templates AGENTS/rules/CI pointent vers les commandes racine.
+      Les anciens chemins restent uniquement des shims pour éviter de casser les agents historiques; ils ne sont plus la source canonique.
+    alternatives_rejetees:
+      - nom: "Copier SEL et scribe-rag comme deux dossiers séparés"
+        raison_rejet: "Trop fragile pour les nouveaux projets: un agent peut oublier un dossier, casser la résolution SEL/RAG ou dériver les templates."
+      - nom: "Renommer sans shims historiques"
+        raison_rejet: "Casserait les scripts, prompts et agents déjà configurés sur les chemins précédents."
+      - nom: "Laisser les templates pointer les anciens chemins"
+        raison_rejet: "Bootstrap réintroduirait l'ancienne topologie et annulerait la portabilité mono-dossier."
+    ne_pas_reproposer:
+      - "Copier séparément `.agent/workflow/scribe-engineering-local-causal-retrieval/` et `.agent/workflow/scribe-rag/`"
+      - "Faire de `.agent/workflow/scribe-rag/` une source canonique séparée"
+      - "Supprimer les shims historiques avant que tous les agents aient migré"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-081"
+      observable: "Copie unique de `.agent/workflow/scribe/` dans /tmp, bootstrap rc=0, Graphify placeholder, scribe-rag build/context, doctor et whoami OK sans anciens dossiers."
+    liens_causaux:
+      source: "JOURNAL-081"
+      renforce: ["GHOST-007", "GHOST-008", "GHOST-009", "VAC-006", "PAT-024"]
 hypotheses: []
 lessons: []
 debts:
@@ -2635,15 +2666,39 @@ journal:
       surfaces_touched: ["scribe"]
       collisions_detected: 0
       stale_syncs: 0
+  - id: "JOURNAL-081"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    agent_type: "cli"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-007", "GHOST-008", "GHOST-009", "VAC-006", "PAT-024"]
+    l0_abstract: "Consolidated SEL and scribe-rag into the portable `.agent/workflow/scribe/` bundle."
+    pourquoi: >
+      The user rejected the two-folder portability model: a future project should receive one workflow directory and have everything initialize cleanly.
+      Moving SEL and scribe-rag under `.agent/workflow/scribe/`, adding root commands plus legacy shims, and updating bootstrap/templates/tests/CI makes the bundle copyable as one unit while preserving compatibility for older agents.
+    validations:
+      - "SEL tests: `python3 -m unittest discover -s .agent/workflow/scribe/sel/tests` passed 61 tests."
+      - "RAG tests: `python3 -m unittest discover -s .agent/workflow/scribe/rag/tests` passed 14 tests."
+      - "scribe-rag eval: `.agent/workflow/scribe/scribe-rag eval --force` returned 8/8."
+      - "doctor: `.agent/workflow/scribe/scribe doctor --suggest-fix` returned 0 errors."
+      - "Portable copy test: copied only `.agent/workflow/scribe/` into `/tmp/tmp.HyRQNscbs9`; bootstrap returned rc=0, created Graphify placeholder, and RAG build/context/whoami worked without old sibling folders."
+      - "Compatibility shims: old SEL doctor path and old scribe-rag context path still execute through the new root."
+    scribe_delta: "GHOST-011 | JOURNAL-081 | portable bundle root"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
 metrics:
-  sessions_total: 80
+  sessions_total: 81
   scars_total: 3
   vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 38
+    CRITICAL: 39
     STANDARD: 39
     QUICK: 3
   dette_p0_p1_courante: 0

@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+SCRIPT = Path(__file__).resolve()
+SCRIPTS_DIR = SCRIPT.parent / "scripts"
+sys.path.insert(0, str(SCRIPTS_DIR))
+
+from rag_challenge import challenge
+from rag_compact import format_explain, format_results
+from rag_context import context as format_context
+from rag_eval import format_eval, run_eval
+from rag_index import INDEX_VERSION, RAG_INDEX_PATH, build_index, read_index
+from rag_interface import doctor, source_snapshot
+from rag_scoring import retrieve
+from rag_whoami import format_whoami
+
+
+def current_index(force: bool = False, *, with_embeddings: bool | None = None):
+    if not force and with_embeddings is None:
+        index = read_index()
+        snapshot = source_snapshot()
+        if index and index.get("version") == INDEX_VERSION and index.get("source_sha256") == snapshot["sha256"]:
+            return index
+    return build_index(force=force, with_embeddings=bool(with_embeddings))
+
+
+def cmd_build(args):
+    index = build_index(force=args.force, with_embeddings=args.with_embeddings)
+    stats = index.get("stats", {})
+    print("SCRIBE-RAG BUILD")
+    print(f"  index: {RAG_INDEX_PATH}")
+    print(f"  mode: {index.get('mode')}")
+    print(f"  entities: {stats.get('entities')}")
+    print(f"  negative_terms: {stats.get('negative_terms')}")
+    if index.get("embedding_dimension"):
+        print(f"  dimension: {index.get('embedding_dimension')}")
+    if index.get("embedding_error"):
+        print(f"  warning: {index.get('embedding_error')}")
+    print(f"  source_line_count: {index.get('source_line_count')}")
+    return 0
+
+
+def cmd_query(args):
+    index = current_index(with_embeddings=args.with_embeddings)
+    print(format_results(f"SCRIBE-RAG QUERY: {args.text}", retrieve(args.text, index, top_k=args.limit, context=args.context)))
+    return 0
+
+
+def cmd_context(args):
+    index = current_index(with_embeddings=args.with_embeddings)
+    print(format_context(index, module=args.module))
+    return 0
+
+
+def cmd_explain(args):
+    index = current_index(with_embeddings=args.with_embeddings)
+    for entity in index.get("entities", []):
+        if entity.get("id") == args.entity_id:
+            print(format_explain(entity, verbose=args.verbose))
+            return 0
+    print(f"ID introuvable: {args.entity_id}", file=sys.stderr)
+    return 2
+
+
+def cmd_challenge(args):
+    index = current_index(with_embeddings=args.with_embeddings)
+    _, lines = challenge(args.plan, index, limit=args.limit)
+    print("\n".join(lines))
+    return 0
+
+
+def cmd_eval(args):
+    index = current_index(force=args.force, with_embeddings=args.with_embeddings)
+    print(format_eval(run_eval(index)))
+    return 0
+
+
+def cmd_doctor(args):
+    print(doctor(), end="")
+    index = read_index()
+    if index:
+        print(f"SCRIBE-RAG: index fresh for sha {index.get('source_sha256')}")
+    else:
+        print("SCRIBE-RAG: index absent")
+    return 0
+
+
+def cmd_whoami(args):
+    print(format_whoami(), end="")
+    return 0
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="scribe-rag", description="Read-only compact retrieval layer over canonical SCRIBE SEL.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    build = sub.add_parser("build")
+    build.add_argument("--force", action="store_true")
+    build.add_argument("--with-embeddings", action="store_true")
+    build.set_defaults(func=cmd_build)
+    query = sub.add_parser("query")
+    query.add_argument("text")
+    query.add_argument("--limit", type=int, default=5)
+    query.add_argument("--context", default="production")
+    query.add_argument("--with-embeddings", action="store_true", default=None)
+    query.set_defaults(func=cmd_query)
+    context = sub.add_parser("context")
+    context.add_argument("--module")
+    context.add_argument("--with-embeddings", action="store_true", default=None)
+    context.set_defaults(func=cmd_context)
+    explain = sub.add_parser("explain")
+    explain.add_argument("entity_id")
+    explain.add_argument("--verbose", action="store_true")
+    explain.add_argument("--with-embeddings", action="store_true", default=None)
+    explain.set_defaults(func=cmd_explain)
+    challenge_parser = sub.add_parser("challenge")
+    challenge_parser.add_argument("plan")
+    challenge_parser.add_argument("--limit", type=int, default=5)
+    challenge_parser.add_argument("--with-embeddings", action="store_true", default=None)
+    challenge_parser.set_defaults(func=cmd_challenge)
+    eval_parser = sub.add_parser("eval")
+    eval_parser.add_argument("--force", action="store_true")
+    eval_parser.add_argument("--with-embeddings", action="store_true", default=None)
+    eval_parser.set_defaults(func=cmd_eval)
+    doctor_parser = sub.add_parser("doctor")
+    doctor_parser.set_defaults(func=cmd_doctor)
+    whoami_parser = sub.add_parser("whoami")
+    whoami_parser.set_defaults(func=cmd_whoami)
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

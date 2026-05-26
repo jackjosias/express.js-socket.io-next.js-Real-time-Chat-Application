@@ -8,8 +8,8 @@ This policy chooses the smallest safe workflow tier. It does not replace
 Command convention from a host project root:
 
 ```bash
-SCRIBE=.agent/workflow/scribe-engineering-local-causal-retrieval/scribe
-SCRIBE_RAG=.agent/workflow/scribe-rag/scribe-rag
+SCRIBE=.agent/workflow/scribe/scribe
+SCRIBE_RAG=.agent/workflow/scribe/scribe-rag
 ```
 
 SEL is the internal guard/write engine. scribe-rag is the only agent retrieval
