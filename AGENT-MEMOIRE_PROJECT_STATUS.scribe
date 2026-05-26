@@ -24,6 +24,8 @@ tiers:
     - "GHOST-007"
     - "PAT-027"
     - "GHOST-008"
+    - "GHOST-009"
+    - "PAT-MA-001"
   warm:
     - "GHOST-001"
     - "VAC-002"
@@ -1147,6 +1149,35 @@ patterns:
       verdict: "approved_pattern"
     status_log: []
     tier_log: []
+  - id: "PAT-MA-001"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-26"
+    schema_patch_date: "2026-05-26"
+    scope: "universal"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-075"
+      observable: "4 agents simultanés sans protocole de surfaces exclusives ont produit des fichiers supprimés, des agents perdus et une mémoire SCRIBE à risque de corruption."
+    confirmed_sessions:
+      - session: "JOURNAL-079"
+        observation: "Le protocole V4 documente l'exclusivité de surface, le lock SEL pour les écritures SCRIBE et scribe sync en préflight."
+    human_validated: true
+    validated_by_session: "JOURNAL-079"
+    titre: "Multi-agent surface exclusivity"
+    l0_abstract: "Multi-agent : 1 surface exclusive par agent + lock SEL pour SCRIBE + scribe sync préflight."
+    pourquoi: >
+      Quatre agents simultanés sur une même codebase sans découpage de surfaces créent des collisions de fichiers, du contexte stale et des écritures mémoire concurrentes. Le protocole robuste est de séparer la propriété d'écriture applicative par surface, de réserver SEL lock aux mutations SCRIBE et de forcer scribe sync avant de commencer.
+    contexte: "Coordination de plusieurs agents LLM sur une même codebase locale avec SCRIBE partagé."
+    liens_causaux:
+      source: "GHOST-009"
+      renforce: ["GHOST-002", "GHOST-003", "GHOST-008"]
+    validite:
+      derniere_verif: "2026-05-26"
+      verifie_par: "JOURNAL-079"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
 ghosts:
   - id: "GHOST-001"
     tier: "warm"
@@ -1356,6 +1387,30 @@ ghosts:
     liens_causaux:
       source: "JOURNAL-078"
       renforce: ["GHOST-006", "GHOST-007", "PAT-027", "GHOST-003"]
+  - id: "GHOST-009"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-26"
+    schema_patch_date: "2026-05-26"
+    titre: "1 surface = 1 agent maximum"
+    l0_abstract: "4 agents simultanés sans surface exclusive = catastrophe. Expérience prouvée."
+    l2_details: >
+      Le modèle multi-agent mature n'est pas un lock global autour de toute la codebase. Chaque agent reçoit une surface exclusive d'écriture applicative, peut lire les autres surfaces, puis utilise SEL lock seulement pour les écritures SCRIBE. L'orchestrateur reste responsable de l'attribution des surfaces et des merges Git.
+    alternatives_rejetees:
+      - nom: "4 agents sur même codebase sans surfaces"
+        raison_rejet: "Collision fichiers, corruption SCRIBE, agents perdus. Testé et échoué."
+      - nom: "Lock global unique pour tout"
+        raison_rejet: "Deadlock certain sur 4 agents. Surfaces exclusives suffisent."
+    ne_pas_reproposer:
+      - "4 agents sans surfaces exclusives"
+      - "Lock global unique multi-agent"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-079"
+      observable: "La feuille V4 adoptée documente explicitement les surfaces exclusives après retour d'expérience multi-agent et rejette les agents sans surfaces."
+    liens_causaux:
+      source: "JOURNAL-079"
+      renforce: ["GHOST-002", "GHOST-003", "GHOST-008", "PAT-MA-001"]
 hypotheses: []
 lessons: []
 debts:
@@ -2509,15 +2564,35 @@ journal:
       - "scribe_install_templates.py and .agent/rules/scribe.md were updated so bootstrap/regeneration does not reintroduce SEL direct retrieval."
       - "scribe-rag challenge for scribe-rag interface plus SEL internal engine returns PROCEED, while direct SEL calls and SEL archival attempts still return STOP."
     scribe_delta: "GHOST-008 | JOURNAL-078 | AGENTS final interface boundary"
+  - id: "JOURNAL-079"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    agent_type: "api"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-002", "GHOST-003", "GHOST-007", "GHOST-008", "PAT-027"]
+    l0_abstract: "Documented the mature multi-agent rule: one exclusive surface per agent."
+    pourquoi: >
+      The V4 documentation alone explains the final workflow, but future agents also need causal memory explaining why multi-agent work requires exclusive surfaces. The rejected alternatives are now explicit so agents do not retry four-agent work on the same files or replace surface ownership with a global lock that would serialize or deadlock the whole sprint.
+    validations:
+      - "GHOST-009 records the rejected alternatives for multi-agent operation."
+      - "PAT-MA-001 records the reusable protocol: exclusive surface, SEL lock for SCRIBE writes, and scribe sync before work."
+      - "The validation target is scribe-rag challenge STOP for agents without surfaces and PROCEED for exclusive surfaces."
+    scribe_delta: "GHOST-009 | PAT-MA-001 | JOURNAL-079"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
 metrics:
-  sessions_total: 78
+  sessions_total: 79
   scars_total: 3
   vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 36
+    CRITICAL: 37
     STANDARD: 39
     QUICK: 3
   dette_p0_p1_courante: 0
