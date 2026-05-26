@@ -1,225 +1,200 @@
 # JJK Messenger
 
-Application de messagerie instantanée minimaliste, moderne et performante développée avec Next.js et Express.js.
+Application de messagerie temps reel construite avec Next.js 16, React 19,
+Express 5, Socket.IO, Prisma et PostgreSQL.
 
-## Aperçu du projet
+## Etat actuel
 
-JJK Messenger est une application de chat en temps réel qui permet aux utilisateurs de s'inscrire, se connecter et échanger des messages instantanément. L'application affiche également le statut en ligne des utilisateurs et l'historique des conversations.
+- Backend Express en Clean Architecture, expose sur `http://localhost:3002`
+  par defaut.
+- Frontend Next.js App Router, expose sur `http://localhost:3000` par
+  defaut.
+- Authentification par cookies HttpOnly: `jjk_access` pour l access token et
+  `jjk_refresh` pour la session longue.
+- Rotation de refresh token persistente en base avec stockage de hash, familles
+  de tokens, revocation en cas de reutilisation et garde concurrente single-winner.
+- Protection CSRF par cookie lisible `jjk_csrf` et header `x-csrf-token` sur
+  les mutations sensibles.
+- Rate limiting auth partage en PostgreSQL via `RateLimitBucket`, donc compatible
+  avec plusieurs instances backend.
+- WebSocket Socket.IO authentifie par cookie `jjk_access`, sans fallback token
+  handshake, avec quotas connexion et message.
+- Frontend sans JWT dans `localStorage` ni dans Redux; Redux garde seulement
+  l etat applicatif et l identite de session.
 
-### Fonctionnalités principales
+## Fonctionnalites
 
-- Authentification (inscription et connexion)
-- Liste des utilisateurs avec statut en ligne/hors ligne
-- Messagerie instantanée en temps réel
-- Interface utilisateur moderne et minimaliste
-- Communication bidirectionnelle via WebSockets
+- Inscription, connexion, session courante, refresh et logout.
+- Liste des utilisateurs avec statut en ligne.
+- Historique de messages par conversation.
+- Envoi et reception de messages en temps reel.
+- Dashboard sombre/clair avec fond anime.
+- Nettoyage preventif des attributs injectes par certaines extensions navigateur
+  avant hydratation React.
 
-## Architecture
+## Structure du depot
 
-Le projet est divisé en deux parties principales :
-
-### Backend (Express.js)
-
-- **Clean Architecture** : Organisation en couches distinctes (Domain, Application, Infrastructure, Presentation)
-- **TypeScript** : Typage fort pour une meilleure maintenabilité
-- **Express.js** : Framework web pour Node.js
-- **Prisma ORM** : Gestion de la base de données
-- **WebSockets** : Communication en temps réel
-- **JWT** : Authentification sécurisée
-
-### Frontend (Next.js)
-
-- **App Router** : Utilisation du nouveau système de routage de Next.js
-- **TypeScript** : Typage fort pour une meilleure maintenabilité
-- **Redux Toolkit** : Gestion de l'état global
-- **RTK Query** : Gestion des requêtes API et du cache
-- **WebSockets** : Communication en temps réel
-- **Tailwind CSS** : Styling moderne et responsive
-
-## Installation
-
-### Prérequis
-
-- Node.js (version LTS recommandée)
-- npm ou yarn
-- PostgreSQL (pour la production)
-
-### Configuration du Backend
-
-1. Accédez au dossier backend :
-   ```bash
-   cd JJK-messenger/backend
-   ```
-
-2. Installez les dépendances :
-   ```bash
-   npm install
-   ```
-
-3. Créez un fichier `.env` basé sur `.env.example` :
-   ```bash
-   cp .env.example .env
-   ```
-
-4. Modifiez le fichier `.env` avec vos propres valeurs :
-   ```
-   PORT=3001
-   JWT_SECRET=votre-cle-secrete-jwt
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/JJK_messenger
-   NODE_ENV=development
-   ```
-
-5. Pour le développement, vous pouvez utiliser SQLite au lieu de PostgreSQL en modifiant le fichier `prisma/schema.prisma` :
-   ```prisma
-   datasource db {
-     provider = "sqlite"
-     url      = "file:./dev.db"
-   }
-   ```
-
-6. Générez le client Prisma et exécutez les migrations :
-   ```bash
-   npx prisma generate
-   npx prisma migrate dev --name init
-   ```
-
-7. Démarrez le serveur de développement :
-   ```bash
-   npm run dev
-   ```
-
-### Configuration du Frontend
-
-1. Accédez au dossier frontend :
-   ```bash
-   cd JJK-messenger/frontend
-   ```
-
-2. Installez les dépendances :
-   ```bash
-   npm install
-   ```
-
-3. Créez un fichier `.env.local` :
-   ```bash
-   touch .env.local
-   ```
-
-4. Ajoutez l'URL de l'API backend :
-   ```
-   NEXT_PUBLIC_API_URL=http://localhost:3001
-   ```
-
-5. Démarrez le serveur de développement :
-   ```bash
-   npm run dev
-   ```
-
-6. Accédez à l'application dans votre navigateur à l'adresse `http://localhost:3000`
-
-## Déploiement en production
-
-### Backend
-
-1. Assurez-vous d'avoir un serveur PostgreSQL configuré et accessible
-2. Mettez à jour le fichier `.env` avec les informations de connexion à la base de données
-3. Générez le client Prisma et exécutez les migrations :
-   ```bash
-   npx prisma generate
-   npx prisma migrate deploy
-   ```
-4. Construisez l'application :
-   ```bash
-   npm run build
-   ```
-5. Démarrez le serveur :
-   ```bash
-   npm start
-   ```
-
-### Frontend
-
-1. Mettez à jour le fichier `.env.local` avec l'URL de l'API backend en production
-2. Construisez l'application :
-   ```bash
-   npm run build
-   ```
-3. Démarrez le serveur :
-   ```bash
-   npm start
-   ```
-
-## Structure du projet
-
-### Backend
-
-```
-backend/
-├── prisma/                  # Schéma et migrations Prisma
-├── src/
-│   ├── domain/              # Entités et règles métier
-│   │   └── entities/        # Modèles de données purs
-│   ├── application/         # Logique applicative
-│   │   ├── interfaces/      # Interfaces pour l'inversion de dépendances
-│   │   └── use-cases/       # Cas d'utilisation
-│   ├── infrastructure/      # Implémentations concrètes
-│   │   ├── database/        # Repositories Prisma
-│   │   ├── auth/            # Services d'authentification
-│   │   └── websocket/       # Service WebSocket
-│   └── presentation/        # Point d'entrée de l'application
-│       └── api/             # Routes et contrôleurs Express
-├── config/                  # Configuration de l'application
-└── index.ts                 # Point d'entrée principal
+```text
+.
+|-- jjk-messenger/
+|   |-- backend/
+|   |   |-- index.ts
+|   |   |-- prisma/
+|   |   `-- src/
+|   |       |-- domain/
+|   |       |-- application/
+|   |       |-- infrastructure/
+|   |       |-- presentation/
+|   |       `-- config/
+|   `-- frontend/
+|       |-- docs/
+|       |-- public/
+|       `-- src/
+|           |-- app/
+|           |-- core/
+|           `-- shared/
+|-- AGENT-MEMOIRE_PROJECT_STATUS.scribe
+|-- graphify-out/
+|-- .agent/workflow/
+|-- ARCHITECTURE.md
+`-- INSTALLATION.md
 ```
 
-### Frontend
+Les anciens dossiers frontend top-level `src/components`, `src/store` et
+`src/utils` ont ete retires. Les surfaces canoniques sont maintenant:
 
+- `src/app` pour les routes Next.js minces.
+- `src/core` pour le domaine, les cas d usage, l infrastructure et la
+  presentation React.
+- `src/shared` pour les utilitaires transverses qui ne dependent pas de React ni
+  de Redux.
+
+Ne pas recreer de dossiers adapters legacy a la racine de `src`.
+
+## Backend
+
+Le backend suit une Clean Architecture stricte:
+
+- `src/domain`: entites et contrats repository.
+- `src/application`: services applicatifs et use cases.
+- `src/infrastructure`: Prisma, auth JWT, securite, logging et Socket.IO.
+- `src/presentation`: routes, controllers, middlewares, validation et cookies.
+- `src/config`: lecture centralisee des variables d environnement.
+
+Modeles Prisma principaux:
+
+- `User`
+- `Message`
+- `ConnectionLog`
+- `RefreshToken`
+- `RateLimitBucket`
+
+Endpoints principaux:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/session`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `GET /api/users`
+- `GET /api/messages/:userId`
+- `GET /health`
+- `GET /ready`
+- `GET /metrics`
+- Socket.IO event `sendMessage`
+
+## Frontend
+
+Le frontend est organise par couches:
+
+- `src/app`: pages App Router et layout global.
+- `src/core/domain`: types, schemas, entites client et ports.
+- `src/core/application`: cas d usage frontend.
+- `src/core/infrastructure`: RTK Query, Redux store, repositories, config,
+  realtime et helpers navigateur.
+- `src/core/presentation`: composants, hooks, providers et pages composees.
+- `src/shared`: erreurs et helpers partages.
+
+La configuration API par defaut pointe vers `http://localhost:3002`. Elle peut
+etre surchargee avec `NEXT_PUBLIC_API_URL`.
+
+## Demarrage rapide
+
+Backend:
+
+```bash
+cd jjk-messenger/backend
+npm install
+cp .env.example .env
+npx prisma generate
+npx prisma migrate dev
+npm run dev
 ```
-frontend/
-├── public/                  # Fichiers statiques
-├── src/
-│   ├── app/                 # Routes Next.js (App Router)
-│   ├── components/          # Composants React
-│   │   ├── ui/              # Composants UI génériques
-│   │   ├── auth/            # Composants liés à l'authentification
-│   │   ├── chat/            # Composants liés au chat
-│   │   └── layout/          # Composants de mise en page
-│   ├── hooks/               # Hooks personnalisés
-│   ├── lib/                 # Bibliothèques et utilitaires
-│   ├── store/               # Configuration Redux
-│   │   ├── slices/          # Slices Redux
-│   │   └── api/             # Configuration RTK Query
-│   ├── styles/              # Styles globaux
-│   └── utils/               # Fonctions utilitaires
-└── next.config.js           # Configuration Next.js
+
+Frontend:
+
+```bash
+cd jjk-messenger/frontend
+npm install
+printf "NEXT_PUBLIC_API_URL=http://localhost:3002\n" > .env.local
+npm run dev
 ```
 
-## Choix techniques
+Ouvrir ensuite `http://localhost:3000`.
 
-### Backend
+## Validation
 
-- **Clean Architecture** : Permet une séparation claire des responsabilités et facilite la maintenance et les tests
-- **Prisma** : ORM moderne qui offre une excellente expérience développeur et une forte typographie
-- **WebSockets** : Permet une communication bidirectionnelle en temps réel
-- **JWT** : Standard pour l'authentification qui fonctionne bien avec les architectures sans état
+Backend:
 
-### Frontend
+```bash
+cd jjk-messenger/backend
+npx prisma validate
+npx prisma generate
+npm run lint
+npm run build
+npm run test:refresh-rotation
+```
 
-- **Next.js avec App Router** : Framework React moderne avec un système de routage avancé
-- **Redux Toolkit** : Simplifie la gestion de l'état global avec moins de code boilerplate
-- **RTK Query** : Gestion efficace du cache et des requêtes API
-- **Tailwind CSS** : Framework CSS utilitaire qui permet un développement rapide et cohérent
+Frontend:
 
-## Améliorations futures
+```bash
+cd jjk-messenger/frontend
+npx next typegen
+npm run lint
+npx tsc --noEmit
+npm run build
+```
 
-- Ajout de fonctionnalités de groupe de discussion
-- Support pour les médias (images, fichiers)
-- Indicateurs de frappe
-- Notifications push
-- Mode hors ligne avec synchronisation
-- Tests unitaires et d'intégration
-- Déploiement avec Docker
+Graph structure:
 
-## Licence
+```bash
+graphify update .
+```
 
-Ce projet est sous licence MIT.
+Si le graphe refuse une baisse de noeuds apres une suppression intentionnelle,
+forcer uniquement apres avoir confirme que la baisse vient bien du nettoyage
+DRY.
+
+## Garanties production ajoutees
+
+- Le rate limiting auth n est plus process-local: les compteurs sont atomiques
+  dans PostgreSQL et partages entre instances.
+- La rotation refresh token est single-winner: une seconde rotation concurrente
+  declenche la revocation de famille comme reutilisation suspecte.
+- Le WebSocket est cookie-only cote serveur et limite les connexions par
+  utilisateur, par IP, ainsi que la cadence `sendMessage`.
+- `TRUST_PROXY_HOPS` reste a configurer explicitement derriere un reverse proxy;
+  ne jamais faire confiance aux headers proxy sans topologie controlee.
+- Les endpoints `/health`, `/ready` et `/metrics` exposent le liveness, la
+  readiness DB/auth/WebSocket et les compteurs runtime HTTP/rate-limit/refus.
+- Chaque requete HTTP recoit un `X-Request-Id` et produit un log structure
+  quand `DEBUG=app:*` ou un namespace compatible est actif.
+- `.github/workflows/ci.yml` valide backend, frontend et SCRIBE sur push et PR.
+
+## Documentation
+
+- `ARCHITECTURE.md`: architecture detaillee et flux.
+- `INSTALLATION.md`: installation locale et production.
+- `jjk-messenger/frontend/docs/`: carte clean architecture du frontend.
+- `AGENT-MEMOIRE_PROJECT_STATUS.scribe`: memoire causale projet.
+- `graphify-out/GRAPH_REPORT.md`: memoire structurelle generee.

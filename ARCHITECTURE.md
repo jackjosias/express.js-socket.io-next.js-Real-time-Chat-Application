@@ -1,136 +1,223 @@
-# Architecture du projet JJK Messenger
+# Architecture JJK Messenger
 
-Ce document détaille l'architecture technique du projet JJK Messenger, expliquant les choix de conception et l'organisation du code.
+Ce document decrit l architecture actuelle du projet apres restructuration Clean
+Architecture frontend et durcissement de l authentification.
 
-## Backend (Express.js avec Clean Architecture)
+## Vue globale
 
-Le backend d'JJK Messenger est construit selon les principes de la Clean Architecture, qui permet une séparation claire des responsabilités et facilite la maintenance et les tests.
+```text
+Browser
+  |
+  |-- HTTP credentials include + CSRF header
+  |       |
+  |       v
+  |   Next.js 16 frontend
+  |       |
+  |-- REST /api/*
+  |       |
+  |       v
+  |   Express 5 backend
+  |       |
+  |-- Socket.IO cookie auth
+  |       |
+  |       v
+  |   Application use cases
+  |       |
+  |       v
+  |   Domain entities and repository contracts
+  |       |
+  |       v
+  |   Prisma repositories
+  |       |
+  |       v
+  |   PostgreSQL
+```
 
-### Couches de l'architecture
+Responsabilites:
 
-1. **Domain / Entities** (Couche centrale)
-   - Contient les entités métier pures (User, Message, ConnectionLog)
-   - Indépendant de tout framework ou technologie
-   - Définit les règles métier fondamentales
+- `jjk-messenger/backend`: API REST, session, securite, realtime et
+  persistence.
+- `jjk-messenger/frontend`: experience utilisateur, orchestration client,
+  cache RTK Query et Socket.IO client.
+- `.agent/workflow/*`: workflows portables et corpus de reference. Ce n est
+  pas du code applicatif runtime.
+- `graphify-out/`: graphe structurel genere du projet.
+- `AGENT-MEMOIRE_PROJECT_STATUS.scribe`: memoire causale et decisions.
 
-2. **Application / Use Cases** (Couche intermédiaire)
-   - Contient la logique applicative
-   - Orchestration des flux de travail
-   - Dépend uniquement du Domain
-   - Définit les interfaces (ports) pour les repositories et services
+## Backend
 
-3. **Infrastructure** (Couche externe)
-   - Implémentations concrètes des interfaces définies dans l'Application
-   - Intégration avec les technologies externes (Prisma, WebSockets, JWT)
-   - Adaptateurs pour les frameworks et bibliothèques
+Le backend est organise en Clean Architecture. Les dependances vont vers
+l interieur: presentation et infrastructure dependent de application/domain,
+jamais l inverse.
 
-4. **Presentation / API** (Couche externe)
-   - Point d'entrée de l'application
-   - Contrôleurs et routes Express
-   - Validation des entrées et sérialisation des réponses
+| Couche | Chemin | Role |
+| --- | --- | --- |
+| Domain | `backend/src/domain` | Entites pures et contrats repository |
+| Application | `backend/src/application` | Use cases et services applicatifs |
+| Infrastructure | `backend/src/infrastructure` | Prisma, JWT, cookies, security, Socket.IO |
+| Presentation | `backend/src/presentation` | Express routes, controllers, middlewares |
+| Config | `backend/src/config` | Variables d environnement normalisees |
 
-### Flux de données
+God nodes observes par Graphify:
 
-1. Les requêtes HTTP arrivent via les routes Express (Presentation)
-2. Les contrôleurs valident les entrées et appellent les cas d'utilisation appropriés (Application)
-3. Les cas d'utilisation orchestrent les opérations en utilisant les entités (Domain) et les interfaces de repository
-4. Les implémentations concrètes des repositories (Infrastructure) interagissent avec la base de données
-5. Les résultats remontent la chaîne jusqu'au client
+- `PrismaUserRepository`
+- `PrismaConnectionLogRepository`
+- `AuthService`
+- `WebSocketService`
+- `PrismaMessageRepository`
 
-### Inversion de dépendance
+Ces noeuds ont le plus fort blast radius. Toute modification dessus demande
+build, lint/typecheck et verification des flux auth/realtime.
 
-Un principe clé de la Clean Architecture est l'inversion de dépendance :
-- Les couches internes ne dépendent jamais des couches externes
-- Les dépendances pointent vers l'intérieur
-- Les interfaces (ports) sont définies dans les couches internes
-- Les implémentations (adaptateurs) sont dans les couches externes
+### Entites et persistence
 
-## Frontend (Next.js avec Redux Toolkit)
+Modeles Prisma:
 
-Le frontend d'JJK Messenger est construit avec Next.js et utilise Redux Toolkit pour la gestion de l'état.
+- `User`: identite, mot de passe hash, statut online, horodatages.
+- `Message`: contenu, sender, receiver, readAt.
+- `ConnectionLog`: historique de connexion WebSocket.
+- `RefreshToken`: hash de refresh token, hash CSRF, familyId, expiration,
+  revocation et remplacement.
+- `RateLimitBucket`: compteur auth partage par scope et cle client.
 
-### Organisation du code
+Les repositories Prisma restent dans `src/infrastructure/database` et
+implementent les ports de `src/domain/repository`.
 
-1. **App Router**
-   - Structure basée sur le système de routage App Router de Next.js
-   - Organisation des pages par fonctionnalité (/login, /register, /dashboard)
-   - Utilisation des layouts pour le partage de composants entre les routes
+### Authentification
 
-2. **Components**
-   - Organisation par domaine fonctionnel (auth, chat, layout, ui)
-   - Composants réutilisables et modulaires
-   - Séparation des préoccupations (présentation vs logique)
+Flux login/register:
 
-3. **State Management**
-   - Redux Toolkit pour la gestion de l'état global
-   - Slices organisés par domaine (auth, users, chat)
-   - RTK Query pour les appels API et la gestion du cache
+1. Le controller valide l entree.
+2. Le use case authentifie ou cree l utilisateur.
+3. `AuthService` genere un access token court, un refresh token et un CSRF
+   token.
+4. Le backend stocke uniquement les hash du refresh token et du CSRF token.
+5. Le backend pose:
+   - `jjk_access`: cookie HttpOnly.
+   - `jjk_refresh`: cookie HttpOnly.
+   - `jjk_csrf`: cookie lisible par le frontend.
+6. Le frontend garde l utilisateur et l etat de session, pas le JWT.
 
-4. **WebSockets**
-   - Hook personnalisé (useWebSocket) pour encapsuler la logique WebSocket
-   - Intégration avec Redux pour mettre à jour l'état en fonction des événements WebSocket
-   - Gestion de la reconnexion automatique
+Flux refresh:
 
-### Flux de données
+1. Le frontend appelle `/api/auth/refresh` avec credentials inclus.
+2. `x-csrf-token` doit correspondre au cookie `jjk_csrf`.
+3. Le backend verifie le refresh token hash.
+4. Le repository effectue une rotation single-winner dans une transaction.
+5. Le refresh token courant est revoque et remplace.
+6. Une reutilisation de token revoque ou une rotation concurrente perdante
+   entraine la revocation de la famille.
 
-1. Les actions utilisateur déclenchent des actions Redux ou des appels API via RTK Query
-2. Les reducers mettent à jour l'état global
-3. Les composants se re-rendent en fonction des changements d'état
-4. Les événements WebSocket sont traités et déclenchent des actions Redux
-5. Les composants réagissent aux mises à jour en temps réel
+Flux logout:
 
-## Communication entre Frontend et Backend
+1. Le frontend appelle `/api/auth/logout` avec header CSRF.
+2. La famille de refresh tokens active est revoquee.
+3. Les cookies de session sont nettoyes.
 
-1. **API REST**
-   - Utilisée pour les opérations CRUD standard
-   - Authentification via JWT
-   - Endpoints organisés par ressource (/api/auth, /api/users, /api/messages)
+### CSRF et origin policy
 
-2. **WebSockets**
-   - Communication bidirectionnelle en temps réel
-   - Utilisée pour les messages instantanés et les mises à jour de statut
-   - Authentification via token dans l'URL de connexion
+- `FRONTEND_URL` definit les origins autorisees, separees par virgule.
+- Les mutations sensibles exigent `x-csrf-token`.
+- `COOKIE_SAME_SITE` vaut `lax` par defaut.
+- `COOKIE_SECURE` devient automatiquement vrai en production ou si
+  `COOKIE_SAME_SITE=none`.
 
-## Base de données
+### WebSocket
 
-Le schéma de base de données est conçu pour optimiser les requêtes fréquentes :
+Socket.IO partage le backend Express. Le chemin d auth cible est le cookie
+`jjk_access`.
 
-1. **Tables principales**
-   - User: stocke les informations utilisateur et le statut
-   - Message: stocke les messages échangés entre utilisateurs
-   - ConnectionLog: enregistre les connexions et déconnexions
+Le serveur WebSocket ne lit plus `handshake auth token`: la session realtime
+est cookie-only. La pression est bornee par quotas de sockets par utilisateur,
+quotas de sockets par IP et fenetre de messages par utilisateur.
 
-2. **Relations**
-   - One-to-Many entre User et Message (un utilisateur peut envoyer/recevoir plusieurs messages)
-   - One-to-Many entre User et ConnectionLog (un utilisateur peut avoir plusieurs journaux de connexion)
+## Observabilite backend
 
-3. **Optimisations**
-   - Index sur les colonnes fréquemment interrogées
-   - Relations bien définies pour faciliter les jointures
+Le backend expose trois surfaces operationnelles hors `/api`:
 
-## Justification des choix techniques
+- `GET /health`: liveness process, sans dependance externe.
+- `GET /ready`: readiness avec ping PostgreSQL, self-check JWT et etat
+  WebSocket initialise.
+- `GET /metrics`: snapshot JSON des compteurs runtime HTTP, refus auth/CSRF/
+  origin, decisions de rate-limit et refus WebSocket.
 
-1. **Clean Architecture (Backend)**
-   - Séparation claire des responsabilités
-   - Facilité de test (les cas d'utilisation peuvent être testés indépendamment)
-   - Flexibilité pour changer de technologies (ex: passer de Prisma à un autre ORM)
+`requestLoggerMiddleware` ajoute un `X-Request-Id` par requete et logue la
+completion HTTP avec methode, chemin, statut, duree et userId quand disponible.
+Les compteurs restent process-local par design: ils servent au diagnostic et au
+smoke local, pas au stockage historique. En production multi-instance, un
+collecteur externe doit agreger ces snapshots ou remplacer cette surface par un
+exporter dedie.
 
-2. **Next.js avec App Router (Frontend)**
-   - Routage moderne et performant
-   - Rendu côté serveur pour de meilleures performances
-   - Organisation intuitive du code
+## Frontend
 
-3. **Redux Toolkit et RTK Query**
-   - Gestion simplifiée de l'état global
-   - Réduction du code boilerplate
-   - Gestion efficace du cache pour les requêtes API
+Le frontend suit le workflow Clean Architecture Next.js applique dans
+`jjk-messenger/frontend`.
 
-4. **WebSockets pour la communication en temps réel**
-   - Communication bidirectionnelle instantanée
-   - Faible latence pour les messages
-   - Mises à jour en temps réel des statuts utilisateur
+| Couche | Chemin | Role |
+| --- | --- | --- |
+| App Router | `frontend/src/app` | Routes minces et layout |
+| Domain | `frontend/src/core/domain` | Types, schemas, entites client, ports |
+| Application | `frontend/src/core/application` | Use cases frontend |
+| Infrastructure | `frontend/src/core/infrastructure` | API, store, realtime, repositories, config |
+| Presentation | `frontend/src/core/presentation` | Composants, hooks, providers, pages |
+| Shared | `frontend/src/shared` | Erreurs et helpers transverses |
 
-5. **Prisma ORM**
-   - API typée pour une meilleure sécurité
-   - Migrations automatisées
-   - Excellent support TypeScript
+Les dossiers legacy top-level `src/components`, `src/store` et `src/utils` ne
+font plus partie de l architecture. Les composants vivent sous
+`src/core/presentation/components`, le store sous
+`src/core/infrastructure/store`, et les erreurs transverses sous `src/shared`.
+
+### Etat client
+
+- Redux Toolkit centralise l etat applicatif.
+- RTK Query gere les appels REST et la reauth.
+- Les cookies sont envoyes par `credentials: "include"`.
+- Le header CSRF est ajoute aux requetes mutantes quand `jjk_csrf` est present.
+- Le client ne lit pas et ne stocke pas le JWT.
+
+### Realtime client
+
+- La configuration API est centralisee dans
+  `src/core/infrastructure/config/api.ts`.
+- Le Socket.IO client utilise la meme base URL que l API.
+- La session WebSocket est conservee par cookie.
+
+### Hydratation React
+
+Le layout racine garde un SSR deterministe. Le nettoyage des mutations DOM
+injectees par extensions navigateur est isole dans
+`ExtensionDomSanitizer`, un provider client monte apres hydratation.
+
+## Politique DRY des dossiers
+
+Les noms de dossiers repetes ne sont pas automatiquement des doublons:
+
+- `domain`, `application`, `infrastructure` et `presentation` existent cote
+  backend et cote frontend parce que chaque runtime possede sa propre Clean
+  Architecture.
+- `docs` existe dans le frontend et dans les workflows `.agent` parce que les
+  docs applicatives et les corpus portables n ont pas le meme ownership.
+- `config` existe cote backend et frontend parce que les variables runtime ne
+  sont pas les memes.
+- `security` existe dans infrastructure et presentation backend parce que les
+  helpers bas niveau et la politique HTTP ne sont pas au meme niveau.
+
+Un dossier est considere doublon a supprimer seulement si:
+
+1. Il porte la meme responsabilite runtime.
+2. Il n a pas de ownership distinct.
+3. Aucun import ou document canonique ne justifie son existence.
+4. Sa suppression ne casse ni build ni generation Graphify.
+
+## Dettes production remboursees
+
+- `DEBT-001`: remboursee par `PrismaRateLimitStore` et le modele
+  `RateLimitBucket`, avec increments atomiques PostgreSQL.
+- `DEBT-004`: remboursee par rotation refresh single-winner et verification
+  `npm run test:refresh-rotation`.
+- `DEBT-005`: remboursee par WebSocket cookie-only et quotas de pression
+  connexion/message.
+
+Pour du trafic edge massif, conserver un WAF ou gateway rate limiter devant
+l application reste recommande, mais ce n est plus requis pour partager les
+compteurs auth entre instances Node.js.

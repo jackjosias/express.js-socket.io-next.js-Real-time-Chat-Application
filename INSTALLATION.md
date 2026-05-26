@@ -1,130 +1,223 @@
-# Guide d'installation et de démarrage
+# Installation JJK Messenger
 
-Ce document fournit les instructions détaillées pour installer et démarrer l'application JJK Messenger.
+Ce guide installe l application actuelle: backend Express sur `3002`, frontend
+Next.js sur `3000`, PostgreSQL via Prisma et authentification par cookies
+HttpOnly.
 
-## Installation du Backend
+## Prerequis
 
-1. Accédez au dossier backend :
-   ```bash
-   cd JJK-messenger/backend
-   ```
+- Node.js 20.x ou plus recent.
+- npm.
+- PostgreSQL accessible localement ou via conteneur.
+- Un `JWT_SECRET` fort, different par environnement.
 
-2. Installez les dépendances :
-   ```bash
-   npm install
-   ```
+## Backend
 
-3. Configurez les variables d'environnement :
-   - Copiez le fichier `.env.example` vers `.env`
-   - Modifiez les valeurs selon votre environnement
+Depuis la racine du depot:
 
-4. Générez le client Prisma :
-   ```bash
-   npx prisma generate
-   ```
+```bash
+cd jjk-messenger/backend
+npm install
+cp .env.example .env
+```
 
-5. Exécutez les migrations de base de données :
-   ```bash
-   npx prisma migrate dev --name init
-   ```
+Configuration minimale dans `.env`:
 
-6. Démarrez le serveur de développement :
-   ```bash
-   npm run dev
-   ```
+```env
+PORT=3002
+NODE_ENV=development
+JWT_SECRET=change-me-with-a-long-random-secret
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/JJK_messenger
+FRONTEND_URL=http://localhost:3000
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=lax
+TRUST_PROXY_HOPS=0
+WS_MAX_SOCKETS_PER_USER=5
+WS_MAX_SOCKETS_PER_IP=50
+WS_MESSAGE_RATE_WINDOW_MS=10000
+WS_MAX_MESSAGES_PER_WINDOW=20
+```
 
-## Installation du Frontend
+Initialiser Prisma:
 
-1. Accédez au dossier frontend :
-   ```bash
-   cd JJK-messenger/frontend
-   ```
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
 
-2. Installez les dépendances :
-   ```bash
-   npm install
-   ```
+Demarrer le backend:
 
-3. Créez un fichier `.env.local` avec le contenu suivant :
-   ```
-   NEXT_PUBLIC_API_URL=http://localhost:3001
-   ```
+```bash
+npm run dev
+```
 
-4. Démarrez le serveur de développement :
-   ```bash
-   npm run dev
-   ```
+Le backend doit afficher un demarrage sur le port `3002`.
 
-5. Accédez à l'application dans votre navigateur à l'adresse `http://localhost:3000`
+## Frontend
 
-## Configuration pour la Production
+Dans un deuxieme terminal:
 
-### Backend
+```bash
+cd jjk-messenger/frontend
+npm install
+printf "NEXT_PUBLIC_API_URL=http://localhost:3002\n" > .env.local
+npm run dev
+```
 
-Pour utiliser PostgreSQL en production :
+Ouvrir `http://localhost:3000`.
 
-1. Modifiez le fichier `prisma/schema.prisma` :
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
+## Variables d environnement backend
 
-2. Mettez à jour la variable `DATABASE_URL` dans le fichier `.env` :
-   ```
-   DATABASE_URL=postgresql://utilisateur:motdepasse@hote:port/base_de_donnees
-   ```
+| Variable | Requis | Valeur locale | Role |
+| --- | --- | --- | --- |
+| `PORT` | non | `3002` | Port Express et Socket.IO |
+| `NODE_ENV` | non | `development` | Mode runtime |
+| `JWT_SECRET` | oui | secret long | Signature des access tokens |
+| `DATABASE_URL` | oui | PostgreSQL local | Connexion Prisma |
+| `FRONTEND_URL` | oui | `http://localhost:3000` | Origins autorisees, separees par virgule |
+| `COOKIE_SECURE` | non | `false` local, `true` prod | Cookies HTTPS only |
+| `COOKIE_SAME_SITE` | non | `lax` | Politique SameSite: `lax`, `strict`, `none` |
+| `TRUST_PROXY_HOPS` | non | `0` | Nombre de hops proxy Express explicitement fiables |
+| `WS_MAX_SOCKETS_PER_USER` | non | `5` | Limite de sockets actifs par utilisateur et par instance |
+| `WS_MAX_SOCKETS_PER_IP` | non | `50` | Limite de sockets actifs par adresse distante et par instance |
+| `WS_MESSAGE_RATE_WINDOW_MS` | non | `10000` | Fenetre de quota message WebSocket |
+| `WS_MAX_MESSAGES_PER_WINDOW` | non | `20` | Messages `sendMessage` autorises par utilisateur et par fenetre |
 
-3. Générez le client Prisma et appliquez les migrations :
-   ```bash
-   npx prisma generate
-   npx prisma migrate deploy
-   ```
+En production cross-site HTTPS, utiliser generalement:
 
-4. Construisez l'application pour la production :
-   ```bash
-   npm run build
-   ```
+```env
+COOKIE_SECURE=true
+COOKIE_SAME_SITE=none
+FRONTEND_URL=https://votre-frontend.example
+```
 
-5. Démarrez le serveur :
-   ```bash
-   npm start
-   ```
+En production same-site, preferer `COOKIE_SAME_SITE=lax` ou `strict` selon le
+flux produit.
 
-### Frontend
+## Base de donnees
 
-1. Mettez à jour le fichier `.env.local` avec l'URL de l'API en production :
-   ```
-   NEXT_PUBLIC_API_URL=https://votre-api-backend.com
-   ```
+Le schema Prisma cible PostgreSQL. Ne pas modifier `provider` vers SQLite pour
+ce projet sans migration explicite, car les migrations, le rate limiting partage
+et la posture production sont calibres sur PostgreSQL.
 
-2. Construisez l'application pour la production :
-   ```bash
-   npm run build
-   ```
+Commandes utiles:
 
-3. Démarrez le serveur :
-   ```bash
-   npm start
-   ```
+```bash
+cd jjk-messenger/backend
+npx prisma generate
+npx prisma migrate dev
+npx prisma studio
+```
 
-## Dépannage
+Deploiement production:
 
-### Problèmes de connexion à la base de données
+```bash
+cd jjk-messenger/backend
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+npm start
+```
 
-- Vérifiez que les informations de connexion dans `.env` sont correctes
-- Assurez-vous que le serveur de base de données est en cours d'exécution
-- Vérifiez les permissions de l'utilisateur de la base de données
+## Build et verification locale
 
-### Problèmes de WebSocket
+Backend:
 
-- Vérifiez que le port 3001 est ouvert et accessible
-- Assurez-vous que le backend est en cours d'exécution
-- Vérifiez les logs du serveur pour les erreurs de connexion WebSocket
+```bash
+cd jjk-messenger/backend
+npx prisma validate
+npx prisma generate
+npm run lint
+npm run build
+npm run test:refresh-rotation
+```
 
-### Problèmes d'authentification
+Frontend:
 
-- Vérifiez que la variable JWT_SECRET est correctement définie
-- Assurez-vous que les tokens JWT ne sont pas expirés
-- Vérifiez les logs du serveur pour les erreurs d'authentification
+```bash
+cd jjk-messenger/frontend
+npx next typegen
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+Smoke tests apres demarrage:
+
+```bash
+curl -I http://localhost:3000/login
+curl http://localhost:3002/health
+curl http://localhost:3002/ready
+curl http://localhost:3002/metrics
+```
+
+Le smoke E2E complet a verifier avant livraison manuelle reste:
+inscription, connexion, refresh, dashboard, Socket.IO `sendMessage`, historique
+messages et logout, avec PostgreSQL migre par `npx prisma migrate dev` ou
+`npx prisma migrate deploy` selon l environnement.
+
+## Production
+
+Backend:
+
+1. Definir un `JWT_SECRET` long et aleatoire.
+2. Definir `DATABASE_URL` vers PostgreSQL production.
+3. Definir `FRONTEND_URL` avec les origins exactes autorisees.
+4. Activer `COOKIE_SECURE=true`.
+5. Choisir `COOKIE_SAME_SITE` selon le mode de deploiement.
+6. Definir `TRUST_PROXY_HOPS` seulement si un reverse proxy fiable termine le trafic.
+7. Ajuster les limites `WS_*` selon le profil de charge.
+8. Executer `npx prisma migrate deploy`.
+9. Executer `npm run build` puis `npm start`.
+10. Brancher l orchestrateur sur `/health` pour le liveness et `/ready` pour la
+    readiness.
+11. Restreindre `/metrics` au reseau d exploitation si l API est exposee
+    publiquement.
+
+Frontend:
+
+1. Definir `NEXT_PUBLIC_API_URL` vers le backend public.
+2. Executer `npm run build`.
+3. Executer `npm start` ou deployer via la plateforme cible.
+
+## CI
+
+Le workflow `.github/workflows/ci.yml` lance trois jobs separes:
+
+- Backend: `npm ci`, Prisma validate/generate, lint/typecheck, build et
+  verification refresh rotation.
+- Frontend: `npm ci`, Next typegen, lint, typecheck et build.
+- SCRIBE: tests Python, doctor et build du graphe bundle.
+
+## Depannage
+
+### Le backend refuse de demarrer
+
+- Verifier que `JWT_SECRET` est defini.
+- Verifier que PostgreSQL accepte la connexion `DATABASE_URL`.
+- Verifier que les migrations Prisma ont ete appliquees.
+
+### Les requetes frontend ne gardent pas la session
+
+- Verifier que `NEXT_PUBLIC_API_URL` pointe vers le backend.
+- Verifier que `FRONTEND_URL` contient exactement l origin du frontend.
+- En HTTPS cross-site, verifier `COOKIE_SECURE=true` et
+  `COOKIE_SAME_SITE=none`.
+- En local HTTP, garder `COOKIE_SECURE=false` et `COOKIE_SAME_SITE=lax`.
+
+### Les mutations auth echouent en CSRF
+
+- Verifier que le cookie `jjk_csrf` est present apres login ou refresh.
+- Verifier que le frontend envoie `x-csrf-token` sur refresh/logout et les
+  requetes mutantes protegees.
+- Verifier que le domaine et le protocole des cookies correspondent a l URL
+  frontend.
+
+### Le WebSocket ne s authentifie pas
+
+- Verifier que le backend tourne sur `3002`.
+- Verifier que le cookie `jjk_access` est pose par le backend.
+- Verifier que le client Socket.IO utilise la meme base URL que
+  `NEXT_PUBLIC_API_URL`.
+- Le serveur WebSocket attend le cookie `jjk_access`; ne pas envoyer de bearer
+  token dans handshake auth.
