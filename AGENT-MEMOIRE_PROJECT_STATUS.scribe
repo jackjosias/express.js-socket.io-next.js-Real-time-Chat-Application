@@ -26,6 +26,7 @@ tiers:
     - "GHOST-008"
     - "GHOST-009"
     - "PAT-MA-001"
+    - "GHOST-010"
   warm:
     - "GHOST-001"
     - "VAC-002"
@@ -1411,6 +1412,35 @@ ghosts:
     liens_causaux:
       source: "JOURNAL-079"
       renforce: ["GHOST-002", "GHOST-003", "GHOST-008", "PAT-MA-001"]
+  - id: "GHOST-010"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-26"
+    schema_patch_date: "2026-05-26"
+    titre: "REST auth cookie-only, Bearer fallback absent"
+    l0_abstract: "REST auth is currently cookie-only; Authorization Bearer must not be reintroduced without an explicit API product decision."
+    l2_details: >
+      The current authMiddleware reads only the HttpOnly access-token cookie and there is no Authorization/Bearer path in backend src, frontend src, or backend scripts.
+      This preserves the browser-security boundary chosen in GHOST-005: browser JavaScript remains untrusted and secrets stay out of Redux, localStorage, and request headers.
+      A future machine-to-machine API can still exist, but it must be a deliberate product/API decision with its own threat model, tests, rate limits, and documented contract, not a silent fallback in the browser auth middleware.
+    alternatives_rejetees:
+      - nom: "Réintroduire Authorization Bearer dans authMiddleware"
+        raison_rejet: "Créerait deux autorités d'auth REST et contournerait la frontière cookie-only validée pour le navigateur."
+      - nom: "REST Bearer fallback without explicit API product decision"
+        raison_rejet: "Un fallback non décidé réouvre une surface de vol de token et reste invisible aux tests produit."
+      - nom: "Browser-stored bearer JWT"
+        raison_rejet: "Déjà rejeté par GHOST-005: une XSS exposerait le secret de session."
+    ne_pas_reproposer:
+      - "Réintroduire Authorization Bearer dans authMiddleware"
+      - "REST Bearer fallback without explicit API product decision"
+      - "Browser-stored bearer JWT"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-080"
+      observable: "authMiddleware.ts reads ACCESS_TOKEN_COOKIE_NAME through getCookie, and rg found no Authorization/Bearer usage in backend src, frontend src, or backend scripts."
+    liens_causaux:
+      source: "JOURNAL-080"
+      renforce: ["GHOST-005", "PAT-027", "VAC-009"]
 hypotheses: []
 lessons: []
 debts:
@@ -2584,15 +2614,36 @@ journal:
       surfaces_touched: ["scribe"]
       collisions_detected: 0
       stale_syncs: 0
+  - id: "JOURNAL-080"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    agent_type: "api"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-005", "GHOST-007", "GHOST-008", "GHOST-009", "PAT-027"]
+    l0_abstract: "Documented that REST auth is cookie-only and Bearer fallback is absent."
+    pourquoi: >
+      The production roadmap assumed a remaining REST Bearer fallback, but the code now shows cookie-only auth: authMiddleware reads only the HttpOnly access-token cookie and no Authorization/Bearer path exists in backend src, frontend src, or backend scripts. Future agents need this recorded so they do not reintroduce a silent bearer fallback while writing integration tests or API hardening.
+    validations:
+      - "scribe-rag challenge 'garder Bearer fallback pour API REST' returned STOP."
+      - "scribe-rag challenge for documenting the cookie-only boundary returned PROCEED."
+      - "rg found no Authorization/Bearer usage in backend src, frontend src, or backend scripts."
+      - "authMiddleware.ts reads only ACCESS_TOKEN_COOKIE_NAME via getCookie."
+    scribe_delta: "GHOST-010 | JOURNAL-080"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
 metrics:
-  sessions_total: 79
+  sessions_total: 80
   scars_total: 3
   vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 37
+    CRITICAL: 38
     STANDARD: 39
     QUICK: 3
   dette_p0_p1_courante: 0
