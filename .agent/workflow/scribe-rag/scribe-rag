@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+SCRIPT = Path(__file__).resolve()
+SCRIPTS_DIR = SCRIPT.parent / "scripts"
+sys.path.insert(0, str(SCRIPTS_DIR))
+
+from rag_challenge import challenge
+from rag_compact import format_explain, format_results
+from rag_context import context as format_context
+from rag_eval import format_eval, run_eval
+from rag_index import RAG_INDEX_PATH, build_index, read_index
+from rag_interface import doctor
+from rag_scoring import retrieve
+
+
+def current_index(force: bool = False):
+    return build_index(force=force)
+
+
+def cmd_build(args):
+    index = build_index(force=args.force)
+    stats = index.get("stats", {})
+    print("SCRIBE-RAG BUILD")
+    print(f"  index: {RAG_INDEX_PATH}")
+    print(f"  mode: {index.get('mode')}")
+    print(f"  entities: {stats.get('entities')}")
+    print(f"  negative_terms: {stats.get('negative_terms')}")
+    print(f"  source_line_count: {index.get('source_line_count')}")
+    return 0
+
+
+def cmd_query(args):
+    index = current_index()
+    print(format_results(f"SCRIBE-RAG QUERY: {args.text}", retrieve(args.text, index, top_k=args.limit, context=args.context)))
+    return 0
+
+
+def cmd_context(args):
+    index = current_index()
+    print(format_context(index, module=args.module))
+    return 0
+
+
+def cmd_explain(args):
+    index = current_index()
+    for entity in index.get("entities", []):
+        if entity.get("id") == args.entity_id:
+            print(format_explain(entity, verbose=args.verbose))
+            return 0
+    print(f"ID introuvable: {args.entity_id}", file=sys.stderr)
+    return 2
+
+
+def cmd_challenge(args):
+    index = current_index()
+    _, lines = challenge(args.plan, index, limit=args.limit)
+    print("\n".join(lines))
+    return 0
+
+
+def cmd_eval(args):
+    index = current_index(force=args.force)
+    print(format_eval(run_eval(index)))
+    return 0
+
+
+def cmd_doctor(args):
+    print(doctor(), end="")
+    index = read_index()
+    if index:
+        print(f"SCRIBE-RAG: index fresh for sha {index.get('source_sha256')}")
+    else:
+        print("SCRIBE-RAG: index absent")
+    return 0
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="scribe-rag", description="Read-only compact retrieval layer over canonical SCRIBE SEL.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    build = sub.add_parser("build")
+    build.add_argument("--force", action="store_true")
+    build.set_defaults(func=cmd_build)
+    query = sub.add_parser("query")
+    query.add_argument("text")
+    query.add_argument("--limit", type=int, default=5)
+    query.add_argument("--context", default="production")
+    query.set_defaults(func=cmd_query)
+    context = sub.add_parser("context")
+    context.add_argument("--module")
+    context.set_defaults(func=cmd_context)
+    explain = sub.add_parser("explain")
+    explain.add_argument("entity_id")
+    explain.add_argument("--verbose", action="store_true")
+    explain.set_defaults(func=cmd_explain)
+    challenge_parser = sub.add_parser("challenge")
+    challenge_parser.add_argument("plan")
+    challenge_parser.add_argument("--limit", type=int, default=5)
+    challenge_parser.set_defaults(func=cmd_challenge)
+    eval_parser = sub.add_parser("eval")
+    eval_parser.add_argument("--force", action="store_true")
+    eval_parser.set_defaults(func=cmd_eval)
+    doctor_parser = sub.add_parser("doctor")
+    doctor_parser.set_defaults(func=cmd_doctor)
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

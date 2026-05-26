@@ -24,6 +24,7 @@ Critical local rules:
 - Use `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe graph --build` and `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe graph --query "..."` for a separate bundle graph under `scribe-out/bundle-graph/`.
 - Keep `AGENT-MEMOIRE_PROJECT_STATUS.scribe`, `scribe-out/`, and `graphify-out/` at the host project root. They are generated project-local surfaces, not portable `.agent` bundle files.
 - Choose the smallest safe tier from `docs/friction-policy.md`; READ_ONLY skips doctor/SCRIBE writes, QUICK skips full ceremony unless risk escalates.
+- `.agent/workflow/scribe-rag/scribe-rag` is experimental read-only retrieval. Use it optionally to compare `scribe-rag context` and `scribe-rag challenge "<plan>"` against SEL during real jjk-messenger work; do not make it mandatory until 5 real implementation/debug/refactor sessions are documented with 0 retrieval regressions. SEL remains the canonical fallback and write/guard authority.
 - Prefer `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe context --mode quick|standard` for compact grounding instead of chaining multiple SCRIBE commands.
 - Use `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe eval` to measure local causal retrieval quality before changing scoring, ranking, or tier policy.
 - Run `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe sync --agent <name> --type <extension|cli|api|unknown>` before work; if it reports stale state, relire/re-sync before editing.

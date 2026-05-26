@@ -1,6 +1,6 @@
 schema_version: "TENOR_SCRIBE_v1"
 project: "JJK Messenger"
-last_update: "2026-05-25"
+last_update: "2026-05-26"
 created_at: "2026-05-20"
 template_source: ".agent/workflow/scribe-engineering-local-causal-retrieval/templates/scribe.master-template.yaml"
 notes:
@@ -9,10 +9,11 @@ notes:
 tiers:
   hot:
     - "VAC-004"
-    - "VAC-005"
     - "VAC-006"
     - "SCAR-001"
     - "SCAR-002"
+    - "SCAR-003"
+    - "VAC-011"
     - "GHOST-002"
     - "PAT-003"
     - "PAT-007"
@@ -21,12 +22,14 @@ tiers:
     - "PAT-024"
     - "GHOST-003"
   warm:
-    - "DEBT-001"
     - "GHOST-001"
     - "VAC-002"
     - "VAC-003"
+    - "VAC-005"
     - "VAC-007"
     - "VAC-008"
+    - "VAC-009"
+    - "VAC-010"
     - "PAT-002"
     - "PAT-005"
     - "PAT-006"
@@ -41,9 +44,15 @@ tiers:
     - "PAT-021"
     - "PAT-022"
     - "PAT-023"
+    - "PAT-025"
+    - "PAT-026"
     - "GHOST-004"
     - "GHOST-005"
+    - "GHOST-006"
   cold:
+    - "DEBT-001"
+    - "DEBT-005"
+    - "DEBT-004"
     - "DEBT-003"
     - "DEBT-002"
     - "VAC-001"
@@ -114,6 +123,21 @@ scars:
     liens_causaux:
       prevenu_par: ["JOURNAL-016", "JOURNAL-041", "JOURNAL-043"]
       renforce: ["VAC-004", "PAT-022"]
+  - id: "SCAR-003"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    severite: "HIGH"
+    titre: "Refresh token rotation race"
+    l0_abstract: "Refresh-token rotation must be single-winner; creating the successor before conditionally revoking the current token lets a token family branch under concurrent refresh."
+    cause_racine: "The repository created the next refresh token first and then updated the current token by id only, so concurrent requests that both read the current token as active could each mint a successor."
+    detection: "Baseline auth audit identified that `RefreshSessionUseCase` reads token state before `PrismaRefreshTokenRepository.rotate`, while `rotate` lacked a `revokedAt: null` single-winner guard."
+    correction: "Rotate now conditionally revokes the current token inside the transaction before creating the successor; a second winner raises `RefreshTokenRotationConflictError`, and the use case maps it to reuse-detected family revocation plus 401."
+    test_binding: "jjk-messenger/backend/scripts/verify-refresh-rotation.ts"
+    liens_causaux:
+      prevenu_par: ["JOURNAL-063"]
+      renforce: ["VAC-009", "GHOST-005", "VAC-003"]
 vaccins:
   - id: "VAC-001"
     tier: "cold"
@@ -203,7 +227,7 @@ vaccins:
     status_log: []
     tier_log: []
   - id: "VAC-005"
-    tier: "hot"
+    tier: "warm"
     status: "ACTIVE"
     date_creation: "2026-05-23"
     schema_patch_date: "2026-05-23"
@@ -229,7 +253,11 @@ vaccins:
       verifie_par: "JOURNAL-038"
       verdict: "still_valid"
     status_log: []
-    tier_log: []
+    tier_log:
+      - date: "2026-05-25"
+        from: "hot"
+        to: "warm"
+        reason: "App security work resumed; SCAR-003 now needs hot retrieval more than completed bundle rootless compatibility."
   - id: "VAC-006"
     tier: "hot"
     status: "ACTIVE"
@@ -306,20 +334,115 @@ vaccins:
         observation: "Root layout initially suppressed root hydration noise and tried an inline `<head>` cleanup for known extension attributes."
       - session: "JOURNAL-059"
         observation: "The inline `<head>` cleanup itself collided with the extension-injected script, so the app now avoids manual root-layout `<head>` and runs a scoped client sanitizer from `<body>`."
+      - session: "JOURNAL-065"
+        observation: "A client sanitizer mounted with React was still too late for attributes injected before hydration; a parser-time body bootstrap now starts cleanup and observation before the app providers hydrate."
     human_validated: false
     validated_by_session: "JOURNAL-053"
     titre: "Browser extension hydration attributes"
     l0_abstract: "If React hydration mismatches show `bis_*`, `cz-shortcut-listen`, or `__processed_*`, treat browser extension DOM mutation as the cause before changing page state."
     virus: "Chasing app SSR state bugs when the mismatch is only extension-injected attributes wastes time; adding manual root-layout `<head>` scripts can create a new hydration comparison target."
-    antidote: "Keep deterministic SSR, keep root `suppressHydrationWarning`, avoid manual `<head>` in App Router root layouts, and use a scoped client sanitizer for known extension attributes/scripts. If a `chrome-extension://` script still appears before React loads, verify in an extension-free/incognito browser because that DOM mutation is outside application control."
+    antidote: "Keep deterministic SSR, keep root `suppressHydrationWarning`, avoid manual `<head>` in App Router root layouts, and run a static parser-time body bootstrap before React providers plus a scoped client sanitizer for known extension attributes/scripts. If a `chrome-extension://` script still appears before React loads, verify in an extension-free/incognito browser because that DOM mutation is outside application control."
     contexte: "Next.js 16 dev overlay hydration diagnostics on login/register pages."
     liens_causaux:
       source: "JOURNAL-053"
       complements: ["VAC-007"]
     validite:
       derniere_verif: "2026-05-25"
-      verifie_par: "JOURNAL-059"
+      verifie_par: "JOURNAL-065"
       verdict: "updated_antidote"
+    status_log: []
+    tier_log: []
+  - id: "VAC-009"
+    tier: "warm"
+    status: "ACTIVE"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    source: "JOURNAL-063"
+    scope: "backend"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-063"
+      observable: "`npm run test:refresh-rotation` proves the first rotation creates one successor and the second same-token rotation raises `RefreshTokenRotationConflictError` without creating another token."
+    confirmed_sessions:
+      - session: "JOURNAL-063"
+        observation: "Backend build passed after mapping rotation conflicts to reuse-detected family revocation and 401."
+    human_validated: false
+    validated_by_session: "JOURNAL-063"
+    titre: "Single-winner refresh token rotation"
+    l0_abstract: "Refresh-token rotation must atomically revoke the current token before minting its successor."
+    virus: "Creating a successor token before a conditional revoke lets concurrent refreshes branch one refresh-token family into multiple valid successors."
+    antidote: "Inside the transaction, update the current token with `where: { id, revokedAt: null }`; if no row changes, treat it as reuse/conflict, revoke the family, and return 401."
+    contexte: "Backend HttpOnly refresh-token session boundary."
+    liens_causaux:
+      source: "JOURNAL-063"
+      prevenu_par: ["SCAR-003"]
+      renforce: ["GHOST-005", "VAC-003"]
+    validite:
+      derniere_verif: "2026-05-25"
+      verifie_par: "JOURNAL-063"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-010"
+    tier: "warm"
+    status: "ACTIVE"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    source: "JOURNAL-068"
+    scope: "backend"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-068"
+      observable: "`npm run lint` initially failed because the backend had no lint script; after adding ESLint, the first strict pass exposed 144 problems before fixes."
+    confirmed_sessions:
+      - session: "JOURNAL-068"
+        observation: "`npm run lint`, `npm run lint:full`, `npm run build`, and `npm run test:refresh-rotation` passed after adding the backend ESLint surface and fixing unsafe types."
+      - session: "JOURNAL-069"
+        observation: "VS Code/TS Server still flagged `scripts/verify-refresh-rotation.ts` until the scripts folder received its own `scripts/tsconfig.json` and `lint:types` ran that project explicitly."
+    human_validated: false
+    validated_by_session: "JOURNAL-068"
+    titre: "Build green is not lint green"
+    l0_abstract: "Never claim backend cleanliness from `tsc` alone; run the backend lint command and the full JSON report when the user asks for unfiltered diagnostics."
+    virus: "Treating a passing TypeScript build as proof that lint diagnostics are clean hides missing scripts, unsafe `any`, stale console usage, and type-only import drift."
+    antidote: "Use `npm run lint` for strict type-aware lint, keep standalone TypeScript scripts covered by a local tsconfig, and use `npm run lint:full` for the unfiltered JSON report that includes every backend TypeScript file, messages, counts, and rule timing stats."
+    contexte: "Backend production hardening and editor red diagnostics."
+    liens_causaux:
+      source: "JOURNAL-068"
+      renforce: ["INV-F003", "SCAR-003", "GHOST-005"]
+    validite:
+      derniere_verif: "2026-05-25"
+      verifie_par: "JOURNAL-069"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "VAC-011"
+    tier: "hot"
+    status: "ACTIVE"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    source: "JOURNAL-072"
+    scope: "auth"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-072"
+      observable: "A rejected login raised a generic Error, so the global middleware returned HTTP 500 and the frontend displayed an internal-server message for normal invalid credentials."
+    confirmed_sessions:
+      - session: "JOURNAL-072"
+        observation: "Invalid login now returns HTTP 401 with the public message `Identifiants invalides`; PostgreSQL connectivity and bcrypt hash storage were verified."
+    human_validated: false
+    validated_by_session: "JOURNAL-072"
+    titre: "Auth expected failures must carry HTTP status"
+    l0_abstract: "Expected auth failures such as invalid credentials must throw status-bearing 4xx errors, never generic Errors that become 500s."
+    virus: "Throwing a plain Error for invalid login, duplicate auth state, or denied session makes the global middleware treat user/business failures as server crashes."
+    antidote: "Create explicit status-bearing auth errors and make the global middleware expose raw messages only for 4xx while preserving generic 500 masking."
+    contexte: "Backend auth use cases and global HTTP error middleware."
+    liens_causaux:
+      source: "JOURNAL-072"
+      complements: ["VAC-003", "GHOST-005"]
+    validite:
+      derniere_verif: "2026-05-25"
+      verifie_par: "JOURNAL-072"
+      verdict: "still_valid"
     status_log: []
     tier_log: []
 patterns:
@@ -936,6 +1059,62 @@ patterns:
       verdict: "still_valid"
     status_log: []
     tier_log: []
+  - id: "PAT-025"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    scope: "architecture"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-062"
+      observable: "The post-frontend DRY scan found repeated directory names that were legitimate because their runtime or documentation ownership differed."
+    confirmed_sessions:
+      - session: "JOURNAL-062"
+        observation: "Only the empty backend config directory was removable; Clean Architecture layer names, workflow corpus docs, and runtime-specific config/security folders were kept and documented."
+    human_validated: false
+    validated_by_session: null
+    titre: "DRY by ownership, not directory name"
+    l0_abstract: "Do not delete repeated folder names by name alone; decide by ownership, imports, runtime responsibility, and validation blast radius."
+    pourquoi: "A clean architecture repo intentionally repeats layer names across backend, frontend, generated docs, and portable workflow corpora. Treating every repeated name as duplication would destroy useful boundaries; the safe DRY rule is to remove only folders with the same responsibility and no active ownership."
+    contexte: "Folder duplication audits after clean architecture migrations, especially src components/store/utils cleanup and portable workflow docs."
+    liens_causaux:
+      source: "JOURNAL-062"
+      renforce: ["GHOST-004", "PAT-021", "PAT-024", "INV-F003"]
+    validite:
+      derniere_verif: "2026-05-25"
+      verifie_par: "JOURNAL-062"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
+  - id: "PAT-026"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    scope: "bundle"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-067"
+      observable: "Opening scribe-out/scribe-dashboard.html through file:// kept showing the generated snapshot even after agents appended new SCRIBE entries."
+    confirmed_sessions:
+      - session: "JOURNAL-067"
+        observation: "Static dashboard generation remains available, while dashboard --serve now provides a local live view that hashes the SCRIBE source and reloads when it changes."
+    human_validated: false
+    validated_by_session: null
+    titre: "Static snapshot plus lightweight live dashboard"
+    l0_abstract: "Keep `scribe dashboard` as a portable snapshot and use `scribe dashboard --serve` for a localhost view that reloads when SCRIBE hash changes."
+    pourquoi: "A file:// dashboard cannot safely reread project YAML on refresh because the browser only reloads the already generated HTML snapshot. A localhost stdlib server keeps the static artifact portable, disables HTTP caching, exposes only fixed local endpoints, and avoids WebSocket, file watcher, database, or external dependency debt."
+    contexte: "SCRIBE dashboard observability, generated snapshot freshness, and local operator workflows."
+    liens_causaux:
+      source: "JOURNAL-067"
+      renforce: ["PAT-011", "PAT-013", "PAT-023", "GHOST-003"]
+    validite:
+      derniere_verif: "2026-05-25"
+      verifie_par: "JOURNAL-067"
+      verdict: "still_valid"
+    status_log: []
+    tier_log: []
 ghosts:
   - id: "GHOST-001"
     tier: "warm"
@@ -1014,25 +1193,23 @@ ghosts:
     date: "2026-05-25"
     schema_patch_date: "2026-05-25"
     titre: "Migration Clean Architecture progressive du frontend"
-    l0_abstract: "The JJK frontend now migrates through thin App Router routes, core-layer source of truth, and legacy re-export adapters instead of a big-bang path rewrite."
+    l0_abstract: "The JJK frontend now uses one canonical Clean Architecture surface: `src/app`, `src/core`, and `src/shared`; legacy top-level adapters were removed after imports were migrated."
     l2_details: >
-      The clean architecture pack was applied as a progressive migration: `src/app` delegates to presentation components,
-      business validation/use cases live under `core/domain` and `core/application`, and Redux/RTK Query/realtime details
-      live under `core/infrastructure`. Legacy paths remain as re-export adapters to preserve hidden imports while new code
-      imports from `src/core/*` or `src/shared/*`.
+      The clean architecture pack was first applied as a progressive migration, then tightened after the user caught duplicate top-level folders.
+      `src/app` delegates to presentation components, business validation/use cases live under `core/domain` and `core/application`, Redux/RTK Query/realtime details live under `core/infrastructure`, and cross-layer utilities live under `src/shared`. The temporary top-level `src/components`, `src/store`, and `src/utils` adapters are now removed to keep the frontend DRY and unambiguous.
     alternatives_rejetees:
-      - nom: "Big-bang deletion of old frontend paths"
-        raison_rejet: "Too risky in a dirty worktree and unnecessary because compatibility re-exports preserve runtime behavior during migration."
+      - nom: "Big-bang deletion of old frontend paths during the first migration pass"
+        raison_rejet: "Too risky in a dirty worktree before import convergence; later removal became safe after graph/import scans and validation showed the adapters were unused."
       - nom: "Introduce Next proxy during this refactor"
         raison_rejet: "The backend contract currently exposes direct REST plus WebSocket send; adding a proxy would be a behavior and deployment change, not only a clean-architecture restructure."
     ne_pas_reproposer: ["Big-bang deletion of old frontend paths", "Silent Next proxy switch"]
     evidence:
       type: "OBSERVED"
       source: "JOURNAL-057"
-      observable: "`npm run lint`, `npx tsc --noEmit`, `npm run build`, `curl -I /login`, Chromium headless render, and `graphify update .` all passed after the migration."
+      observable: "`npm run lint`, `npx tsc --noEmit`, `npm run build`, import scans, `curl -I /login`, and Graphify rebuild passed after migration and after removing unused legacy adapters."
     liens_causaux:
       source: "JOURNAL-057"
-      renforce: ["PAT-024", "INV-F003"]
+      renforce: ["PAT-024", "INV-F003", "JOURNAL-060"]
   - id: "GHOST-005"
     tier: "warm"
     status: "ACTIVE"
@@ -1041,13 +1218,15 @@ ghosts:
     titre: "Cookie-backed auth boundary choisi"
     l0_abstract: "Auth now treats browser JavaScript as untrusted: access and refresh secrets live in HttpOnly cookies, while the frontend only stores session identity."
     l2_details: >
-      The hardening repays the browser-stored JWT debt without inserting a Next.js proxy layer. Direct backend cookies keep the existing REST and Socket.IO topology, refresh rotation narrows stolen-refresh-token lifetime, and a readable CSRF cookie plus origin policy protects unsafe browser requests without exposing bearer tokens to Redux or localStorage.
+      The hardening repays the browser-stored JWT debt without inserting a Next.js proxy layer. Direct backend cookies keep the existing REST and Socket.IO topology, refresh rotation narrows stolen-refresh-token lifetime, and a readable CSRF cookie plus origin policy protects unsafe browser requests without exposing bearer tokens to Redux or localStorage. JOURNAL-071 closes the remaining ambiguity by removing the REST Authorization Bearer fallback; authenticated REST and Socket.IO now share the same cookie authority unless a future explicit API-product GHOST reopens bearer auth.
     alternatives_rejetees:
       - nom: "Keep JWT in localStorage for simplicity"
         raison_rejet: "A single XSS would expose the bearer token and keep the original DEBT-003 production gap alive."
       - nom: "Move auth through a Next.js proxy in this step"
         raison_rejet: "The current deployment already has direct REST plus Socket.IO; adding a proxy would widen the behavior and ops change beyond the debt repayment."
-    ne_pas_reproposer: ["Browser-stored bearer JWT", "Silent Next proxy switch during auth debt repayment"]
+      - nom: "Keep REST Authorization Bearer fallback after cookie auth"
+        raison_rejet: "Two simultaneous auth authorities make the security boundary ambiguous; bearer API support must be an explicit product decision, not leftover compatibility."
+    ne_pas_reproposer: ["Browser-stored bearer JWT", "Silent Next proxy switch during auth debt repayment", "REST Bearer fallback without explicit API product decision"]
     evidence:
       type: "OBSERVED"
       source: "JOURNAL-058"
@@ -1056,23 +1235,63 @@ ghosts:
       source: "JOURNAL-058"
       rembourse: ["DEBT-003"]
       renforce: ["GHOST-004", "VAC-003", "INV-F003"]
+  - id: "GHOST-006"
+    tier: "warm"
+    status: "ACTIVE"
+    date: "2026-05-26"
+    schema_patch_date: "2026-05-26"
+    titre: "SCRIBE-RAG read-only au-dessus de SEL"
+    l0_abstract: "SCRIBE-RAG V1 reads canonical SEL JSON export, builds a portable BM25 cache, and does not replace SEL ownership of writes, doctor, lock, sync, or state."
+    l2_details: >
+      Phase 0 measured the existing retrieval at 2/4 on semantic safety cases: localStorage and client-side token storage were the gaps, while refresh-race and HttpOnly cookie auth were reachable.
+      V1 therefore builds a separate read-only layer under .agent/workflow/scribe-rag, resolves the SEL CLI from a canonical absolute path relative to its own file, writes only generated cache under scribe-out/rag-index.json, and keeps embeddings optional until a post-scoring eval proves they are needed.
+      Phase 8 passed 8/8 with BM25-only scoring, so sentence-transformers remains skipped for portability.
+      After review on 2026-05-26, root AGENTS.md marks scribe-rag as experimental optional preflight only; it must not become mandatory until five real jjk-messenger implementation/debug/refactor sessions document 0 retrieval regressions.
+    alternatives_rejetees:
+      - nom: "Import direct de scripts internes SEL"
+        raison_rejet: "Private Python imports would couple scribe-rag to SEL internals and create silent breakage on refactor."
+      - nom: "PATH scribe non canonique"
+        raison_rejet: "A PATH lookup can hit a legacy root adapter or global command and recreate split-brain behavior across machines."
+      - nom: "sentence-transformers obligatoire sans mesure"
+        raison_rejet: "A heavy runtime dependency would weaken portability when BM25 plus negative-memory scoring already passes the current eval."
+      - nom: "Archiver ou fusionner SEL après RAG V1"
+        raison_rejet: "SEL remains the write and guard authority; scribe-rag is a read/retrieval layer, not a replacement."
+    ne_pas_reproposer: ["Import direct de scripts internes SEL", "PATH scribe non canonique", "sentence-transformers obligatoire sans mesure", "Archiver SEL après RAG V1"]
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-073"
+      observable: "scribe-rag eval --force passed 8/8 in BM25 mode; five synthetic drills passed, but root AGENTS.md now keeps scribe-rag experimental until five real sessions prove it."
+    liens_causaux:
+      source: "JOURNAL-073"
+      renforce: ["PAT-007", "PAT-018", "PAT-023", "PAT-024", "GHOST-002", "GHOST-003"]
 hypotheses: []
 lessons: []
 debts:
   - id: "DEBT-001"
-    tier: "warm"
-    status: "ACTIVE"
+    tier: "cold"
+    status: "REMBOURSEE"
     titre: "Process-local auth rate limiter"
     date_creation: "2026-05-23"
-    schema_patch_date: "2026-05-23"
+    schema_patch_date: "2026-05-25"
     type: "CHOISIE"
     severite: "HIGH"
-    l0_abstract: "The auth limiter is intentionally process-local; replace it with shared enforcement before horizontal scaling."
+    l0_abstract: "The auth limiter is no longer process-local; auth attempts are counted atomically in PostgreSQL and shared across backend instances."
     l2_details: >
-      This session chose an in-memory limiter to harden the current single-process app without adding infrastructure.
-      In multi-instance production, each process would keep separate counters, so enforcement must move to Redis,
-      an API gateway, or a WAF before horizontal scaling.
-    plan_remboursement: "Before multi-instance production, replace the in-memory store with Redis/gateway/WAF rate limiting and configure proxy trust deliberately."
+      The first hardening pass used an in-memory limiter to avoid adding infrastructure. JOURNAL-064 replaces that with `RateLimitBucket` and `PrismaRateLimitStore`, so login/register counters are keyed by scope and client identity in PostgreSQL. The atomic upsert prevents per-process counter divergence during horizontal scaling while keeping the route middleware before validation and controller execution.
+    plan_remboursement: "REMBOURSEE: `RateLimitBucket` migration, `PrismaRateLimitStore`, and async auth rate-limit middleware now provide shared PostgreSQL enforcement."
+    liens_causaux:
+      source: "JOURNAL-064"
+      renforce: ["VAC-003", "INV-F003", "GHOST-005"]
+    status_log:
+      - date: "2026-05-25"
+        from: "ACTIVE"
+        to: "REMBOURSEE"
+        reason: "Auth rate limiting moved from process-local Map state to PostgreSQL shared atomic buckets."
+    tier_log:
+      - date: "2026-05-25"
+        from: "warm"
+        to: "cold"
+        reason: "Debt is repaid and kept searchable as historical auth governance."
   - id: "DEBT-002"
     tier: "cold"
     status: "REMBOURSEE"
@@ -1130,6 +1349,61 @@ debts:
         from: "warm"
         to: "cold"
         reason: "Debt is repaid and retained as historical auth governance."
+  - id: "DEBT-004"
+    tier: "cold"
+    status: "REMBOURSEE"
+    titre: "Refresh token rotation race"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    type: "OBSERVED_AUDIT_FINDING"
+    severite: "HIGH"
+    l0_abstract: "Concurrent refresh requests can no longer mint multiple valid successor refresh tokens."
+    l2_details: >
+      `RefreshSessionUseCase` reads a non-revoked refresh token, then `PrismaRefreshTokenRepository.rotate` creates the next
+      token before updating the current token by id only. Two concurrent refreshes can both read the old token as active,
+      create two successor tokens in the same family, and then both mark the old token rotated. This weakens refresh-token
+      reuse detection because the family can branch without a clear replay signal.
+    plan_remboursement: "REMBOURSEE: `PrismaRefreshTokenRepository.rotate` now conditionally revokes the current token where `revokedAt` is null before creating the successor, `RefreshSessionUseCase` maps conflicts to reuse-detected family revocation plus 401, and `npm run test:refresh-rotation` verifies the single-winner path."
+    liens_causaux:
+      source: "JOURNAL-061"
+      explique_par: ["GHOST-005"]
+      renforce: ["SCAR-003", "VAC-009", "VAC-003", "INV-F003"]
+    status_log:
+      - date: "2026-05-25"
+        from: "ACTIVE"
+        to: "REMBOURSEE"
+        reason: "Refresh rotation became single-winner and conflict maps to reuse-detected family revocation."
+    tier_log:
+      - date: "2026-05-25"
+        from: "warm"
+        to: "cold"
+        reason: "Debt is repaid and retained as historical auth governance."
+  - id: "DEBT-005"
+    tier: "cold"
+    status: "REMBOURSEE"
+    titre: "WebSocket session pressure boundary"
+    date_creation: "2026-05-25"
+    schema_patch_date: "2026-05-25"
+    type: "OBSERVED_AUDIT_FINDING"
+    severite: "HIGH"
+    l0_abstract: "Socket.IO no longer accepts client-supplied auth-token fallback and now enforces connection and message pressure limits."
+    l2_details: >
+      `WebSocketService` now authenticates browser realtime sessions from the HttpOnly access cookie only. It rejects missing or invalid cookie auth, caps active sockets by user and remote address, and throttles `sendMessage` events per authenticated user window. The frontend already connects with credentials, so removing the JavaScript-provided handshake token path preserves the cookie-backed auth boundary.
+    plan_remboursement: "REMBOURSEE: WebSocket auth is cookie-only and the service enforces per-user sockets, per-IP sockets, and per-user message windows via configurable `WS_*` limits."
+    liens_causaux:
+      source: "JOURNAL-064"
+      explique_par: ["GHOST-005"]
+      renforce: ["VAC-002", "INV-F003"]
+    status_log:
+      - date: "2026-05-25"
+        from: "ACTIVE"
+        to: "REMBOURSEE"
+        reason: "Removed Socket.IO bearer/handshake fallback and added explicit connection/message pressure limits."
+    tier_log:
+      - date: "2026-05-25"
+        from: "warm"
+        to: "cold"
+        reason: "Debt is repaid and retained as historical realtime governance."
 mutations: []
 journal:
   - id: "JOURNAL-001"
@@ -1845,23 +2119,275 @@ journal:
       - "graphify update . rebuilt the application graph to 265 nodes and 203 edges."
       - "git diff --check passed."
     scribe_delta: "VAC-008 | JOURNAL-059"
+  - id: "JOURNAL-060"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["GHOST-004", "PAT-021", "VAC-006", "PAT-024", "GHOST-003", "SCAR-002"]
+    l0_abstract: "Removed the remaining frontend legacy adapter folders to eliminate duplicate `components`, `store`, and `utils` surfaces."
+    pourquoi: "The progressive migration kept top-level re-export adapters to avoid hidden import breakage, but the user correctly identified that the duplicate folder names now created architectural ambiguity. Once import scans showed no app code depended on `@/components`, `@/store`, or `@/utils`, removing those adapters made `src/app`, `src/core`, and `src/shared` the only frontend source surfaces and restored DRY at the directory level."
+    validations:
+      - "Removed top-level `src/components`, `src/store`, and `src/utils` after confirming their remaining files were only compatibility re-exports or empty folders."
+      - "Import scan found no active `@/components`, `@/store`, or `@/utils` application imports."
+      - "Documentation now states that legacy top-level adapters must not be recreated."
+      - "frontend npx next typegen passed."
+      - "frontend npm run lint passed."
+      - "frontend npx tsc --noEmit passed."
+      - "frontend npm run build passed."
+      - "curl -I http://localhost:3000/login returned 200 OK."
+      - "Graphify was rebuilt with force after the intentional node decrease from deleted adapter files: 254 nodes, 203 edges."
+      - "git diff --check passed."
+    scribe_delta: "GHOST-004 | JOURNAL-060"
+  - id: "JOURNAL-061"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["VAC-003", "VAC-002", "GHOST-005", "DEBT-001", "PAT-024", "GHOST-003"]
+    l0_abstract: "Completed the baseline security audit for the current auth and WebSocket worktree state."
+    pourquoi: "SEL is now committed, so the useful work moved back to jjk-messenger. The audit found that the auth strategy is already captured as GHOST-005, not GHOST-004, and that the remaining production risks are concrete implementation debts: refresh-token rotation race and WebSocket pressure/session boundary."
+    validations:
+      - "`graphify explain AuthService` and `graphify explain WebSocketService` identified the auth and realtime surfaces."
+      - "`graphify path AuthService WebSocketService` found no direct path, so the audit inspected middleware, cookies, controllers, refresh token repository, and Socket.IO handshake code."
+      - "`scribe challenge \"audit sécurité baseline\"` returned WARN with VAC-003, GHOST-005, DEBT-001, and VAC-002 as relevant memory."
+      - "`graphify update .` initially refused to overwrite a smaller graph; another session later rebuilt the graph after intentional adapter deletion, so the audit stayed grounded in code reads and Graphify explains."
+      - "GHOST-005 already documents the cookie-backed auth boundary; no duplicate GHOST-004 auth entry was created."
+      - "DEBT-004 records the refresh-token rotation race."
+      - "DEBT-005 records the Socket.IO session pressure boundary."
+    scribe_delta: "DEBT-004 | DEBT-005 | JOURNAL-061"
+  - id: "JOURNAL-062"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-004", "PAT-021", "PAT-024", "VAC-006", "GHOST-003", "SCAR-002"]
+    l0_abstract: "Completed the post-clean-architecture duplicate scan and aligned root documentation with the current app shape."
+    pourquoi: "After removing frontend legacy adapters, the remaining risk was over-correcting DRY by deleting folders that only shared a name. The scan separated true duplicate ownership from intentional layer symmetry, kept workflow corpus docs and runtime-specific config/security folders, and made README, ARCHITECTURE, INSTALLATION, and backend env example describe the cookie-auth and canonical frontend surfaces accurately."
+    validations:
+      - "Duplicate directory scan outside frontend found no removable runtime duplicate after the empty backend config directory was gone."
+      - "README.md, ARCHITECTURE.md, INSTALLATION.md, and backend .env.example now use backend port 3002 and cookie-backed auth/CSRF/origin policy language."
+      - "Stale-doc grep found no remaining port 3001, old JJK-messenger path, backend/config path, or token-in-URL wording in the updated root docs/env example."
+      - "backend npm run build passed."
+      - "frontend npx next typegen passed."
+      - "frontend npm run lint passed."
+      - "frontend npx tsc --noEmit passed."
+      - "frontend npm run build passed."
+      - "curl -I http://localhost:3000/login returned 200 OK."
+      - "graphify update . rebuilt the application graph at 254 nodes and 203 edges."
+      - "git diff --check passed."
+    scribe_delta: "PAT-025 | JOURNAL-062"
+  - id: "JOURNAL-063"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["SCAR-003", "GHOST-005", "VAC-003", "DEBT-004", "GHOST-003", "PAT-024"]
+    l0_abstract: "Repaid DEBT-004 by making refresh-token rotation single-winner."
+    pourquoi: "The refresh endpoint protects the session boundary; allowing one old refresh token to mint multiple successors under concurrent requests would weaken replay detection. The fix moves the atomic guard into the repository transaction and maps a lost rotation race to reuse-detected family revocation instead of a 500."
+    validations:
+      - "`npm run test:refresh-rotation` passed and proves only the first rotation creates a successor."
+      - "`npm run build` passed for the backend."
+      - "`graphify update .` rebuilt the application graph at 260 nodes and 214 edges."
+      - "DEBT-004 moved to REMBOURSEE/cold."
+      - "SCAR-003 and VAC-009 document the causal bug and prevention rule."
+    scribe_delta: "SCAR-003 | VAC-009 | DEBT-004 REMBOURSEE | JOURNAL-063"
+  - id: "JOURNAL-064"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["SCAR-003", "VAC-009", "VAC-003", "GHOST-005", "DEBT-001", "DEBT-005", "PAT-024"]
+    l0_abstract: "Repaid the remaining auth and realtime production debts after the cookie-session migration."
+    pourquoi: "After DEBT-004 made refresh rotation single-winner, the two remaining hostile-prod gaps were shared auth throttling and realtime pressure. PostgreSQL-backed rate buckets remove per-process auth counters without adding a new infrastructure dependency, and cookie-only Socket.IO plus quotas removes the JavaScript token fallback and bounds abuse by user/IP/message window."
+    validations:
+      - "npx prisma generate passed after adding RateLimitBucket."
+      - "npx prisma validate passed."
+      - "backend npm run build passed."
+      - "backend npm run test:refresh-rotation passed."
+      - "frontend npx next typegen passed."
+      - "frontend npm run lint passed."
+      - "frontend npx tsc --noEmit passed."
+      - "frontend npm run build passed."
+      - "curl -I http://localhost:3000/login returned 200 OK."
+      - "Stale grep found no remaining port 3001, token-in-URL wording, or Socket.IO handshake auth token usage in app source/docs."
+      - "graphify update . rebuilt the application graph at 277 nodes and 241 edges."
+      - "git diff --check passed."
+    scribe_delta: "DEBT-001 REMBOURSEE | DEBT-005 REMBOURSEE | JOURNAL-064"
+  - id: "JOURNAL-065"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-008", "PAT-024", "GHOST-003", "SCAR-002"]
+    l0_abstract: "Moved the extension DOM cleanup to a parser-time body bootstrap before React hydration."
+    pourquoi: "The persisted `/login` mismatch still showed only extension-owned `bis_skin_checked` mutations, but the previous React-mounted sanitizer ran after hydration had already compared the mutated DOM. The fix keeps manual `<head>` avoided, then starts a static inline body bootstrap before app providers so known extension attributes/scripts are removed and observed during HTML parsing, while the client sanitizer remains as the post-hydration guard."
+    validations:
+      - "graphify query hydration mismatch bis_skin_checked ExtensionDomSanitizer RootLayout AuthPageShell identified the sanitizer/layout surface."
+      - "Served `/login` HTML contains `extension-dom-sanitizer-bootstrap` before app providers."
+      - "Extracted bootstrap JavaScript validates with `new Function(...)`."
+      - "frontend npm run lint passed."
+      - "frontend npx tsc --noEmit passed."
+      - "frontend npx next typegen passed."
+      - "frontend npm run build passed with routes /, /login, /register, /dashboard."
+      - "`graphify update .` rebuilt the application graph at 278 nodes and 241 edges."
+      - "`git diff --check` passed."
+    scribe_delta: "VAC-008 | JOURNAL-065"
+  - id: "JOURNAL-066"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["SCAR-003", "GHOST-003", "PAT-024"]
+    l0_abstract: "Added a real backend lint command that validates all backend TypeScript surfaces."
+    pourquoi: "The backend previously had no `npm run lint` script, so red editor diagnostics could not be checked through the requested command. The fix adds a separate lint tsconfig that runs TypeScript in no-emit mode over `index.ts`, `src/**/*.ts`, and `scripts/**/*.ts` without changing the production build emit surface or adding an ESLint dependency that is not installed."
+    validations:
+      - "`npm run lint` now executes `tsc --project tsconfig.lint.json --noEmit --pretty false` and passes."
+      - "`npm run build` still passes for the backend."
+      - "`npm run test:refresh-rotation` still passes."
+      - "`git diff --check` passes."
+    scribe_delta: "JOURNAL-066"
+  - id: "JOURNAL-067"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["PAT-011", "PAT-013", "GHOST-001", "PAT-007", "PAT-024", "GHOST-003"]
+    l0_abstract: "Added a lightweight live mode for the SCRIBE dashboard while preserving static snapshots."
+    pourquoi: "The stale browser view was caused by file:// reloading an already generated HTML snapshot, not by SCRIBE write failure. The live solution stays small: a localhost-only Python stdlib server serves the latest dashboard payload, exposes a hash endpoint, disables HTTP caching, and lets the browser reload only when the SCRIBE hash changes."
+    validations:
+      - "scribe dashboard --help exposes --serve, --host, --port, and --poll-interval-ms."
+      - "Python bytecode compilation passed for the dashboard module, CLI parser, and memory tests."
+      - "Full SCRIBE bundle unittest discovery passed: 57 tests."
+      - "scribe dashboard regenerated scribe-out/scribe-dashboard.html and scribe-dashboard-data.json with 123 entities."
+      - "Live smoke test on http://127.0.0.1:8765/ returned HTML with /api/scribe-state and pollIntervalMs 1000."
+      - "/api/scribe-state returned the current SCRIBE sha256 during the live smoke test."
+      - "scribe graph --build rebuilt the bundle graph under scribe-out/bundle-graph."
+      - "git diff --check passed."
+    scribe_delta: "PAT-026 | JOURNAL-067"
+  - id: "JOURNAL-068"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["SCAR-003", "GHOST-003", "PAT-024", "VAC-010"]
+    l0_abstract: "Added strict backend ESLint and an unfiltered full lint report command."
+    pourquoi: "The user correctly rejected a build-only cleanliness claim because `npm run lint` did not exist for the backend. The fix installs a backend-local ESLint stack, keeps `tsc --noEmit` as `lint:types`, adds type-aware ESLint as `lint:eslint`, and adds `lint:full` as JSON + stats so every linted file appears even when it has no messages."
+    validations:
+      - "`npm run lint` passed: `lint:types` plus type-aware ESLint with `--max-warnings=0`."
+      - "`npm run lint:full` passed and emitted JSON entries with `messages: []`, counts, and timing stats for all linted backend TypeScript files."
+      - "`npm run build` passed."
+      - "`npm run test:refresh-rotation` passed."
+      - "`graphify update .` rebuilt the application graph at 287 nodes and 252 edges."
+      - "`git diff --check` passed."
+    scribe_delta: "VAC-010 | JOURNAL-068"
+  - id: "JOURNAL-069"
+    date: "2026-05-25"
+    mode: "STANDARD"
+    hot_entries_consulted: ["VAC-010", "SCAR-003", "GHOST-003"]
+    l0_abstract: "Aligned backend script TypeScript diagnostics between VS Code and the CLI lint gate."
+    pourquoi: "The user correctly spotted red TypeScript diagnostics in `scripts/verify-refresh-rotation.ts` after the CLI lint pass. The cause was not hidden lint failure; the script lived outside the root backend `tsconfig.json` include set, so TS Server could treat it as an inferred project without Node types or ES2020 libs. A local `scripts/tsconfig.json` and an explicit second `tsc --project scripts/tsconfig.json` in `lint:types` make editor diagnostics and terminal validation converge."
+    validations:
+      - "`./node_modules/.bin/tsc --project scripts/tsconfig.json --noEmit --pretty false` passed."
+      - "`npm run lint` passed, including root lint types, script lint types, and ESLint with `--max-warnings=0`."
+      - "`npm run lint:full` passed and emitted JSON with `messages: []`, `errorCount: 0`, and `warningCount: 0` for `scripts/verify-refresh-rotation.ts` and the analyzed backend files."
+      - "`npm run build` passed."
+      - "`npm run test:refresh-rotation` passed."
+      - "`graphify update .` rebuilt the application graph at 304 nodes and 267 edges."
+      - "`git diff --check` passed."
+    scribe_delta: "VAC-010 | JOURNAL-069"
+  - id: "JOURNAL-070"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["SCAR-003", "VAC-010", "PAT-015", "GHOST-005", "PAT-024", "GHOST-003"]
+    l0_abstract: "Stabilized the worktree into a deliverable baseline with CI, E2E validation, and backend observability."
+    pourquoi: "After the auth/realtime hardening, the main production risk became confusion and silent regression rather than another feature. The worktree was frozen into logical commit lots, the backend dev entrypoint was aligned with ambient Express types, missing local migrations were applied before E2E, and CI plus health/readiness/metrics now make broken states visible early."
+    validations:
+      - "Worktree freeze plan written under scribe-out/commit-plan with nine logical commit lots and no staging or commit performed."
+      - "Backend dev startup failure caused by ts-node not loading ambient .d.ts files was fixed with ts-node --files."
+      - "npx prisma migrate dev applied the missing local refresh-token and rate-limit migrations before E2E validation."
+      - "Backend npx prisma validate, npx prisma generate, npm run lint, npm run build, and npm run test:refresh-rotation passed."
+      - "Frontend npx next typegen, npm run lint, npx tsc --noEmit, and npm run build passed."
+      - "SCRIBE unittest discovery passed with 57 tests; scribe doctor reported 0 errors; scribe graph --build passed."
+      - "E2E smoke passed register, login, session, refresh, users, Socket.IO sendMessage, message history, and logout."
+      - "curl checks passed for /health, /ready, and /metrics; metrics included HTTP and auth rate-limit counters after the smoke."
+      - "GitHub Actions CI YAML parsed locally and defines backend, frontend, and SCRIBE jobs."
+      - "graphify update . rebuilt the application graph at 304 nodes and 267 edges."
+      - "git diff --check passed."
+    scribe_delta: "JOURNAL-070"
+  - id: "JOURNAL-071"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-005", "SCAR-003", "VAC-010", "PAT-024", "GHOST-003"]
+    l0_abstract: "Closed the pre-production blockers raised by the senior review except for the user-controlled atomic commit step."
+    pourquoi: "The review correctly identified four fixable blockers before any new feature: Node 18 ambiguity, an undecided REST Bearer fallback, E2E smoke living in generated `scribe-out/`, and unexplained stale 500 metrics. Node 20 is now pinned in `.nvmrc`, package manifests, and lockfiles; REST auth now uses only the HttpOnly cookie boundary from GHOST-005; the E2E smoke moved into backend source as `npm run test:e2e-smoke` with its own backend `socket.io-client` devDependency; and a fresh server plus smoke run reproduced no 500 responses."
+    validations:
+      - "Backend `npm run lint:full` passed with 0 errors and 0 warnings, including `scripts/e2e-smoke.ts`."
+      - "Backend `npm run build` passed."
+      - "Backend `npm run test:refresh-rotation` passed."
+      - "Backend `npm run test:e2e-smoke` passed register, login, session, refresh, users, Socket.IO sendMessage, message history, and logout."
+      - "The smoke test imports backend-local `socket.io-client` instead of requiring the frontend dependency tree."
+      - "Frontend `npm run lint`, `npx tsc --noEmit`, and Node 20 `npm run build` passed."
+      - "`npx prisma validate` passed."
+      - "`/metrics` after a fresh server restart and E2E smoke showed only 200/201/204 responses and no 500 counter."
+      - "`graphify update .` rebuilt the app graph at 324 nodes and 315 edges."
+      - "`git diff --check` passed."
+    scribe_delta: "GHOST-005 | JOURNAL-071"
+  - id: "JOURNAL-072"
+    date: "2026-05-25"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["SCAR-003", "VAC-003", "GHOST-005", "PAT-024", "GHOST-003"]
+    l0_abstract: "Fixed invalid-login failures being reported as HTTP 500 instead of expected HTTP 401."
+    pourquoi: "Invalid credentials are an expected auth denial, not a server crash. The login path used a generic Error, so the global middleware had no status metadata and returned the internal-server envelope that the frontend surfaced. The fix makes invalid credentials status-bearing and keeps 4xx business messages public while preserving generic masking for true 5xx failures."
+    validations:
+      - "PostgreSQL connectivity verified with Prisma migrate status; schema is up to date on localhost:5432."
+      - "User rows exist with bcrypt hashes only; no plaintext password is recoverable from the database."
+      - "Backend `npm run lint` passed."
+      - "Invalid login curl returned HTTP 401 with `Identifiants invalides`."
+    scribe_delta: "VAC-011 | JOURNAL-072"
+  - id: "JOURNAL-073"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["PAT-007", "PAT-018", "PAT-023", "PAT-024", "GHOST-002", "GHOST-003", "GHOST-005", "SCAR-003"]
+    l0_abstract: "Built SCRIBE-RAG V1 as a read-only compact retrieval layer beside SEL."
+    pourquoi: "Phase 0 proved the current SCRIBE retrieval missed the highest-risk localStorage/client-token cases, but the fix did not require mutating SEL or installing embeddings first. A separate read-only layer preserves rollback, uses the canonical SEL export contract, and gives agents compact query/context/challenge outputs while keeping SEL responsible for writes and guards."
+    validations:
+      - "Phase 0 baseline was 2/4: localStorage and client-token queries failed while refresh-race and HttpOnly-cookie auth passed."
+      - "python3 -m compileall -q .agent/workflow/scribe-rag passed."
+      - "python3 -m unittest discover -s .agent/workflow/scribe-rag/tests passed 10 tests."
+      - "scribe-rag build --force built BM25 index with 132 entities and 16 negative-memory terms."
+      - "scribe-rag eval --force passed 8/8; query compact lines = 12 and context compact lines = 15."
+      - "scribe-rag challenge 'mettre JWT en localStorage' returned VERDICT STOP via GHOST-005 negative memory."
+      - "scribe-rag challenge 'mettre JWT en cookie HttpOnly' returned VERDICT PROCEED."
+      - "scribe-rag doctor delegated to SEL doctor with 0 errors and confirmed the index hash is fresh."
+    scribe_delta: "GHOST-006 | JOURNAL-073"
+  - id: "JOURNAL-074"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-006", "GHOST-005", "SCAR-003", "PAT-007", "PAT-018", "GHOST-002", "GHOST-003"]
+    l0_abstract: "Promoted SCRIBE-RAG V1 into the root AGENTS.md read-only preflight after five session drills."
+    pourquoi: "The gate was intentionally operational instead of theoretical: localStorage JWT blocked, HttpOnly cookies proceeded, refresh-race retrieval returned SCAR-003 first, PATH-based scribe invocation blocked, and mandatory sentence-transformers without measurement blocked. Because the compact layer passed all five realistic drills plus 8/8 eval, AGENTS.md can ask future agents to use it first while preserving SEL fallback."
+    validations:
+      - "Session drill 1: challenge 'mettre JWT en localStorage' returned VERDICT STOP via GHOST-005."
+      - "Session drill 2: challenge 'garder JWT en cookies HttpOnly avec CSRF' returned VERDICT PROCEED."
+      - "Session drill 3: query 'bug concurrent refresh token' returned SCAR-003 first."
+      - "Session drill 4: challenge 'utiliser PATH scribe non canonique dans scribe-rag' returned VERDICT STOP via GHOST-006."
+      - "Session drill 5: challenge 'rendre sentence-transformers obligatoire sans mesure' returned VERDICT STOP via GHOST-006."
+      - "scribe-rag eval --force passed 8/8 after the AGENTS.md preflight update."
+      - "scribe-rag doctor delegated to SEL doctor with 0 errors and confirmed a fresh index."
+      - "git diff --check -- AGENTS.md passed."
+    scribe_delta: "GHOST-006 | JOURNAL-074"
+  - id: "JOURNAL-075"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-006", "PAT-015", "PAT-023", "GHOST-003"]
+    l0_abstract: "Rétrogradé scribe-rag en préflight expérimental optionnel après review disciplinaire."
+    pourquoi: "Les cinq validations exécutées étaient des drills synthétiques, pas cinq vraies sessions applicatives. Ajouter scribe-rag comme préflight actif était donc prématuré; la règle racine indique maintenant qu'il sert seulement à comparer le retrieval pendant de vraies tâches jjk-messenger, avec SEL comme autorité canonique et fallback permanent."
+    validations:
+      - "AGENTS.md indique explicitement que scribe-rag reste expérimental et non obligatoire."
+      - "Critère de promotion clarifié: 5 vraies sessions d'implémentation, debug ou refactor documentées avec 0 régression de retrieval."
+      - "Le warning fluctuant était W012 state.json: il apparaît après mutation SCRIBE légitime puis disparaît après scribe sync --repair."
+      - "Le gros diff SCRIBE contre HEAD contient aussi des deltas historiques non commités JOURNAL-060..074, SCAR-003, VAC-009..011, PAT-025..026, DEBT-004..005; il ne représente pas seulement scribe-rag."
+    scribe_delta: "GHOST-006 | JOURNAL-075"
 metrics:
-  sessions_total: 59
-  scars_total: 2
-  vaccins_actifs: 8
+  sessions_total: 75
+  scars_total: 3
+  vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 22
-    STANDARD: 34
+    CRITICAL: 33
+    STANDARD: 39
     QUICK: 3
-  dette_p0_p1_courante: 1
+  dette_p0_p1_courante: 0
   dezoom_total: 0
   taux_dezoom_par_session: 0.0
   torvalds_items_total: 0
   torvalds_items_traites: 0
   taux_completion_prod_moyenne: 0.0
   delta_feuille_vs_prod_moyen: 0.0
-  graphify_queries_total: 34
-  tokens_saved_via_graphify: 128900
+  graphify_queries_total: 45
+  tokens_saved_via_graphify: 145200
