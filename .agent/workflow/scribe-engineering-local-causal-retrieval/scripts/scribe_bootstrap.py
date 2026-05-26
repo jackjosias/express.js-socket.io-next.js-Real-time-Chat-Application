@@ -27,6 +27,47 @@ AGENT_GITIGNORE = """__pycache__/
 .pytest_cache/
 .mypy_cache/
 """
+APP_MARKER_FILES = {
+    "package.json",
+    "pyproject.toml",
+    "requirements.txt",
+    "Cargo.toml",
+    "go.mod",
+    "composer.json",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+}
+APP_CODE_EXTENSIONS = {
+    ".c",
+    ".cpp",
+    ".cs",
+    ".go",
+    ".java",
+    ".js",
+    ".jsx",
+    ".kt",
+    ".php",
+    ".py",
+    ".rs",
+    ".swift",
+    ".ts",
+    ".tsx",
+}
+IGNORED_APP_CODE_PARTS = {
+    ".agent",
+    ".git",
+    ".next",
+    ".venv",
+    "build",
+    "coverage",
+    "dist",
+    "graphify-out",
+    "node_modules",
+    "scribe-out",
+    "target",
+    "vendor",
+}
 
 
 @dataclass(frozen=True)
@@ -43,7 +84,9 @@ Runner = Callable[[Sequence[str], Path], CommandResult]
 class BootstrapReport:
     new_project: bool
     actions: list[str] = field(default_factory=list)
+    infos: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     doctor_code: int = 0
     sync_repaired: bool = False
     graphify_status: str = "unchanged"
@@ -130,30 +173,53 @@ def run_installer(project_root: Path, dry_run: bool) -> int:
     return installer.run()
 
 
-def ensure_graphify(project_root: Path, runner: Runner, skip_graphify: bool) -> tuple[str, list[str]]:
+def has_application_code(project_root: Path) -> bool:
+    for marker in APP_MARKER_FILES:
+        if (project_root / marker).exists():
+            return True
+    for path in project_root.rglob("*"):
+        if not path.is_file():
+            continue
+        relative_parts = set(path.relative_to(project_root).parts)
+        if relative_parts & IGNORED_APP_CODE_PARTS:
+            continue
+        if path.name in {"AGENTS.md", "AGENT-MEMOIRE_PROJECT_STATUS.scribe", ".graphifyignore"}:
+            continue
+        if path.suffix.lower() in APP_CODE_EXTENSIONS:
+            return True
+    return False
+
+
+def write_graphify_placeholder(project_root: Path) -> None:
+    graphify_out = project_root / "graphify-out"
+    graphify_out.mkdir(parents=True, exist_ok=True)
+    (graphify_out / "GRAPH_REPORT.md").write_text(
+        "# Graph Report\n\nBootstrap placeholder: no application graph has been built yet.\n",
+        encoding="utf-8",
+    )
+    (graphify_out / "graph.json").write_text("{}\n", encoding="utf-8")
+
+
+def ensure_graphify(project_root: Path, runner: Runner, skip_graphify: bool) -> tuple[str, list[str], list[str], list[str]]:
     graphify_out = project_root / "graphify-out"
     if graphify_out.exists():
-        return "existing", []
+        return "existing", [], [], []
     if skip_graphify:
-        return "skipped", ["Graphify initialization skipped by flag."]
+        return "skipped", [], ["Graphify initialization skipped by flag."], []
+    if not has_application_code(project_root):
+        write_graphify_placeholder(project_root)
+        return "placeholder", ["Graphify: placeholder initialisé. Relancer graphify update . après ajout du code source."], [], []
     if shutil.which("graphify") is None:
-        return "missing", ["Graphify command not found; install graphifyy then run `graphify update .`."]
+        return "missing", [], [], ["Graphify manquant sur projet avec code. Lancer graphify update . d'abord."]
 
     warnings: list[str] = []
+    errors: list[str] = []
     update = runner(("graphify", "update", "."), project_root)
     if update.returncode != 0:
-        warnings.append("`graphify update .` did not complete; graphify-out may stay absent until application files exist.")
+        errors.append("Graphify manquant sur projet avec code. Lancer graphify update . d'abord.")
         if update.stderr.strip():
-            warnings.append(update.stderr.strip().splitlines()[-1])
-        if not graphify_out.exists():
-            graphify_out.mkdir(parents=True, exist_ok=True)
-            (graphify_out / "GRAPH_REPORT.md").write_text(
-                "# Graph Report\n\nBootstrap placeholder: no application graph has been built yet.\n",
-                encoding="utf-8",
-            )
-            (graphify_out / "graph.json").write_text("{}\n", encoding="utf-8")
-            return "placeholder", warnings
-        return "partial", warnings
+            errors.append(update.stderr.strip().splitlines()[-1])
+        return "missing", [], warnings, errors
 
     codex = runner(("graphify", "codex", "install"), project_root)
     if codex.returncode != 0:
@@ -161,7 +227,7 @@ def ensure_graphify(project_root: Path, runner: Runner, skip_graphify: bool) -> 
     hooks = runner((str(BUNDLE_COMMAND), "graphify-hooks", "--apply"), project_root)
     if hooks.returncode != 0:
         warnings.append("Graphify hook hardening did not complete; run `scribe graphify-hooks --apply` manually.")
-    return "initialized", warnings
+    return "initialized", [], warnings, errors
 
 
 def ensure_scribe_out(project_root: Path) -> None:
@@ -231,8 +297,10 @@ def bootstrap_project(
     ensure_scribe_out(project_root)
     report.actions.append("scribe-out ready")
 
-    report.graphify_status, graphify_warnings = ensure_graphify(project_root, runner, skip_graphify)
+    report.graphify_status, graphify_infos, graphify_warnings, graphify_errors = ensure_graphify(project_root, runner, skip_graphify)
+    report.infos.extend(graphify_infos)
     report.warnings.extend(graphify_warnings)
+    report.errors.extend(graphify_errors)
 
     report.doctor_code = run_doctor(scribe_path, project_root / "scribe-out" / "scribe-doctor-report.md", suggest_fix=True)
     report.sync_repaired = ensure_state(project_root, scribe_path, agent, agent_type, report.new_project)
@@ -249,8 +317,12 @@ def print_report(report: BootstrapReport) -> None:
     print(f"  sync: {'repaired' if report.sync_repaired else 'in-sync'}")
     for action in report.actions:
         print(f"  action: {action}")
+    for info in report.infos:
+        print(f"  info: {info}")
     for warning in report.warnings:
         print(f"  warning: {warning}", file=sys.stderr)
+    for error in report.errors:
+        print(f"  error: {error}", file=sys.stderr)
     if report.new_project:
         print("  next: read graphify-out/GRAPH_REPORT.md before application work.")
 
@@ -275,7 +347,8 @@ def main() -> int:
         dry_run=args.dry_run,
     )
     print_report(report)
-    return 0 if report.doctor_code == 0 and not any("conflicts" in item for item in report.warnings) else 1
+    has_conflicts = any("conflicts" in item for item in report.warnings)
+    return 0 if report.doctor_code == 0 and not has_conflicts and not report.errors else 1
 
 
 if __name__ == "__main__":

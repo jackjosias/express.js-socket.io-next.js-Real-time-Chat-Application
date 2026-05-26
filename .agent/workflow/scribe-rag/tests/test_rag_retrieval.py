@@ -39,6 +39,14 @@ class RagRetrievalTests(unittest.TestCase):
         verdict, _ = challenge("mettre JWT en cookie HttpOnly", self.index)
         self.assertEqual(verdict, "PROCEED")
 
+    def test_challenge_allows_approved_cookie_refresh_rotation(self) -> None:
+        verdict, _ = challenge("cookies HttpOnly refresh rotation", self.index)
+        self.assertEqual(verdict, "PROCEED")
+
+    def test_negative_memory_does_not_block_generic_empty_project_overlap(self) -> None:
+        verdict, _ = challenge("corriger bootstrap projet vide pour BM25 canonique", self.index)
+        self.assertNotEqual(verdict, "STOP")
+
     def test_compact_query_line_budget(self) -> None:
         output = format_results("SCRIBE-RAG QUERY: auth jwt", retrieve("auth jwt", self.index, top_k=5))
         self.assertLessEqual(len(output.splitlines()), 15)

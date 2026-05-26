@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from rag_interface import DEFAULT_SCRIBE, RAG_INDEX_PATH, export_scribe, source_snapshot
+from rag_embeddings import MODEL_NAME, available as embeddings_available, encode_texts
 from rag_text import expand_tokens, tokenize
 
-INDEX_VERSION = 1
+INDEX_VERSION = 2
 ACTIVE_STATUSES = {"ACTIVE", ""}
 
 
@@ -70,6 +71,7 @@ def normalize_entity(entity: dict[str, Any], position: int) -> dict[str, Any]:
         "tokens": tokens,
         "position": position,
         "is_invariant": str(entity.get("collection")) == "invariants" or str(entity.get("id") or "").startswith("INV-"),
+        "approved": bool(value.get("approved")),
         "value": value,
     }
 
@@ -106,15 +108,28 @@ def build_negative_memory_index(entities: list[dict[str, Any]]) -> dict[str, dic
     return index
 
 
-def build_index(index_path: Path = RAG_INDEX_PATH, scribe_path: Path = DEFAULT_SCRIBE, *, force: bool = False) -> dict[str, Any]:
+def build_index(index_path: Path = RAG_INDEX_PATH, scribe_path: Path = DEFAULT_SCRIBE, *, force: bool = False, with_embeddings: bool = False) -> dict[str, Any]:
     snapshot = source_snapshot(scribe_path)
+    requested_mode = "hybrid" if with_embeddings else "bm25"
     if not force:
         current = read_index(index_path)
-        if is_fresh(current, snapshot):
+        if is_fresh(current, snapshot, requested_mode):
             return current
     export = export_scribe(include_values=True)
     raw_entities = [item for item in export.get("entities", []) if isinstance(item, dict) and item.get("id")]
     entities = [normalize_entity(entity, position) for position, entity in enumerate(raw_entities)]
+    embedding_error = ""
+    embedding_dimension = 0
+    mode = requested_mode
+    if with_embeddings:
+        if not embeddings_available():
+            mode = "bm25"
+            embedding_error = "sentence-transformers unavailable; rebuilt BM25 fallback"
+        else:
+            vectors = encode_texts(entity_embedding_text(entity) for entity in entities)
+            embedding_dimension = len(vectors[0]) if vectors else 0
+            for entity, vector in zip(entities, vectors):
+                entity["embedding"] = vector
     payload = {
         "version": INDEX_VERSION,
         "built_at": datetime.now(timezone.utc).isoformat(),
@@ -122,12 +137,16 @@ def build_index(index_path: Path = RAG_INDEX_PATH, scribe_path: Path = DEFAULT_S
         "source_sha256": snapshot["sha256"],
         "source_mtime_ns": snapshot["mtime_ns"],
         "source_line_count": snapshot["line_count"],
-        "mode": "bm25",
+        "mode": mode,
+        "embedding_model": MODEL_NAME if mode == "hybrid" else "",
+        "embedding_dimension": embedding_dimension,
+        "embedding_error": embedding_error,
         "entities": entities,
         "negative_memory_index": build_negative_memory_index(raw_entities),
         "stats": {
             "entities": len(entities),
             "negative_terms": len(build_negative_memory_index(raw_entities)),
+            "embedding_dimension": embedding_dimension,
             "doctor_errors": export.get("summary", {}).get("doctor_errors", 0),
             "doctor_warnings": export.get("summary", {}).get("doctor_warnings", 0),
         },
@@ -146,8 +165,21 @@ def read_index(index_path: Path = RAG_INDEX_PATH) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def is_fresh(index: dict[str, Any] | None, snapshot: dict[str, Any]) -> bool:
-    return bool(index and index.get("version") == INDEX_VERSION and index.get("source_sha256") == snapshot["sha256"])
+def entity_embedding_text(entity: dict[str, Any]) -> str:
+    return " ".join(
+        str(part)
+        for part in (entity.get("id"), entity.get("collection"), entity.get("title"), entity.get("abstract"), entity.get("scope"), entity.get("search_text"))
+        if part
+    )
+
+
+def is_fresh(index: dict[str, Any] | None, snapshot: dict[str, Any], requested_mode: str) -> bool:
+    return bool(
+        index
+        and index.get("version") == INDEX_VERSION
+        and index.get("source_sha256") == snapshot["sha256"]
+        and index.get("mode") == requested_mode
+    )
 
 
 def write_index(index_path: Path, payload: dict[str, Any]) -> None:

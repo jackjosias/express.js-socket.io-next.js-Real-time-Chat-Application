@@ -54,7 +54,7 @@ patterns:
     l0_abstract: "Commit/push product source by default; share AGENT-MEMOIRE_PROJECT_STATUS.scribe only when causal memory should be collaborative, never graphify-out or scribe-out by default."
     scope: "dev"
     evidence:
-      type: "POLICY"
+      type: "REASONED"
       source: "JOURNAL-000"
       observable: "graphify-out and scribe-out are generated local state, while AGENT-MEMOIRE_PROJECT_STATUS.scribe is optional shared causal memory."
     liens_causaux:

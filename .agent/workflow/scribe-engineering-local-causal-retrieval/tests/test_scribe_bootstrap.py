@@ -12,6 +12,8 @@ from scribe_test_utils import load_script_module
 scribe_bootstrap = load_script_module("scribe_bootstrap")
 bootstrap_project = getattr(scribe_bootstrap, "bootstrap_project")
 create_scribe_from_template = getattr(scribe_bootstrap, "create_scribe_from_template")
+ensure_graphify = getattr(scribe_bootstrap, "ensure_graphify")
+has_application_code = getattr(scribe_bootstrap, "has_application_code")
 
 scribe_state = load_script_module("scribe_state")
 update_state_after_write = getattr(scribe_state, "update_state_after_write")
@@ -76,6 +78,36 @@ class ScribeBootstrapTests(unittest.TestCase):
             self.assertEqual(report.doctor_code, 0)
             self.assertFalse(report.sync_repaired)
             self.assertEqual(scribe_path.read_text(encoding="utf-8"), before)
+
+    def test_graphify_placeholder_is_info_on_empty_project(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            status, infos, warnings, errors = ensure_graphify(root, lambda *_: None, skip_graphify=False)
+
+            self.assertFalse(has_application_code(root))
+            self.assertEqual(status, "placeholder")
+            self.assertIn("Graphify: placeholder initialisé", infos[0])
+            self.assertEqual(warnings, [])
+            self.assertEqual(errors, [])
+            self.assertTrue((root / "graphify-out" / "GRAPH_REPORT.md").exists())
+
+    def test_graphify_missing_is_error_when_app_code_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "package.json").write_text('{"name":"app"}', encoding="utf-8")
+            original_which = scribe_bootstrap.shutil.which
+            try:
+                scribe_bootstrap.shutil.which = lambda _: None
+                status, infos, warnings, errors = ensure_graphify(root, lambda *_: None, skip_graphify=False)
+            finally:
+                scribe_bootstrap.shutil.which = original_which
+
+            self.assertTrue(has_application_code(root))
+            self.assertEqual(status, "missing")
+            self.assertEqual(infos, [])
+            self.assertEqual(warnings, [])
+            self.assertIn("Graphify manquant sur projet avec code", errors[0])
 
 
 if __name__ == "__main__":
