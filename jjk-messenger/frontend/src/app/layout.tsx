@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import StoreProvider from "@/components/layout/StoreProvider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { ExtensionDomSanitizer } from "@/core/presentation/components/providers/ExtensionDomSanitizer";
+import { extensionDomSanitizerBootstrapScript } from "@/core/presentation/components/providers/extensionDomSanitizerBootstrap";
+import StoreProvider from "@/core/presentation/components/providers/StoreProvider";
 
 export const metadata: Metadata = {
   title: "JJK Messenger",
@@ -23,8 +15,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="fr" suppressHydrationWarning>
+      <body className="antialiased" suppressHydrationWarning>
+        <script
+          id="extension-dom-sanitizer-bootstrap"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: extensionDomSanitizerBootstrapScript }}
+        />
+        <ExtensionDomSanitizer />
         <StoreProvider>{children}</StoreProvider>
       </body>
     </html>
