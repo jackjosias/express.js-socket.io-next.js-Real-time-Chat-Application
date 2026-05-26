@@ -14,6 +14,22 @@ Scope:
 - For installation, migration, or several agents working on the same repo, read `docs/multi-agent-installation.md` before editing.
 - For SCRIBE tooling work, use `<SCRIBE> graph --build` and `<SCRIBE> graph --query "..."` for a separate bundle graph under `scribe-out/bundle-graph/`; do not pollute the app graph or store generated graph output inside the bundle.
 
+## Versioning boundaries
+
+Default commit/push scope is the host product source. For this bundle's host
+projects:
+
+- `AGENT-MEMOIRE_PROJECT_STATUS.scribe`: version only when the team wants shared causal memory between agents and humans.
+- `graphify-out/`: do not version by default; it is generated structural graph output and can be rebuilt with `graphify update .`.
+- `scribe-out/`: do not version by default; it is local runtime state such as indexes, locks, doctor reports, dashboards, exports, and sync metadata.
+- `.agent/`: version only when deliberately maintaining or distributing agent tooling; keep it out of ordinary product commits.
+
+Rationale: generated memory and runtime directories create noisy diffs, may
+contain stale local state, vary by machine/agent/session, and are
+reconstructible from the product source plus the SCRIBE commands. Run
+`<SCRIBE> worktree` before delivery to separate source changes from generated
+noise.
+
 Rules:
 - At the start of a copied `.agent` installation, run `<SCRIBE> bootstrap`; it is idempotent and initializes only missing Graphify/SCRIBE/scribe-out surfaces.
 - Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure

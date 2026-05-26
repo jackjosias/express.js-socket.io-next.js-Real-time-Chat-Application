@@ -59,6 +59,20 @@
 #   Règle    : rien dans ce dossier ne devient loi active tant que ce n'est pas
 #              promu explicitement dans ce fichier `docs/scribe.md`.
 #
+# HYGIÈNE VCS / PUSH :
+#   Le scope de commit/push par défaut est le produit applicatif hôte.
+#   `AGENT-MEMOIRE_PROJECT_STATUS.scribe` peut être versionné quand l'équipe
+#   veut partager la mémoire causale entre agents/humains.
+#   `graphify-out/` ne se versionne pas par défaut : c'est un graphe généré,
+#   reconstructible par `graphify update .`.
+#   `scribe-out/` ne se versionne pas par défaut : c'est de l'état runtime
+#   local (index, locks, rapports, exports, dashboards, sync metadata).
+#   `.agent/` ne se versionne que si l'équipe maintient volontairement
+#   l'outillage agentique; hors maintenance tooling, l'exclure des commits
+#   produit.
+#   Avant livraison : utiliser `<SCRIBE> worktree` pour séparer source réelle,
+#   mémoire causale validée, tooling volontaire et bruit généré.
+#
 # RÈGLE ABSOLUE D'ÉCRITURE SCRIBE :
 #   ❌ NE PAS écrire : "Le fichier X importe Y"          → Graphify le sait
 #   ❌ NE PAS écrire : "La fonction Z fait A"            → Graphify le sait

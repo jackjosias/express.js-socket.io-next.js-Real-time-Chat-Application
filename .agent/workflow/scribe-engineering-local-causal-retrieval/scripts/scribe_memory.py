@@ -289,6 +289,10 @@ def build_parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--data-output", default=str(DEFAULT_DASHBOARD_DATA_PATH), help="Dashboard JSON data output path.")
     dashboard.add_argument("--no-data", action="store_true", help="Do not write a separate JSON data file.")
     dashboard.add_argument("--include-values", action="store_true", help="Include full entity YAML values in the dashboard data payload.")
+    dashboard.add_argument("--serve", action="store_true", help="Serve a lightweight live dashboard that reloads when the SCRIBE file changes.")
+    dashboard.add_argument("--host", default="127.0.0.1", help="Host for --serve. Defaults to localhost only.")
+    dashboard.add_argument("--port", type=int, default=8765, help="Port for --serve. Use 0 to pick a free port.")
+    dashboard.add_argument("--poll-interval-ms", type=int, default=2000, help="Browser polling interval for --serve live reload. Minimum 1000ms.")
     dashboard.set_defaults(func=cmd_dashboard)
     return parser
 

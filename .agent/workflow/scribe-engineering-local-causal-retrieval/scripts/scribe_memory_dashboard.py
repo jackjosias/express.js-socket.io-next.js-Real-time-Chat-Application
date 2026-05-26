@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import time
 from html import escape
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from scribe_dashboard_assets import DASHBOARD_CSS
 from scribe_dashboard_assets_js import DASHBOARD_JS
@@ -20,13 +24,38 @@ ECHARTS_PATH = Path(__file__).resolve().parents[1] / "vendor" / "echarts" / "ech
 
 
 def cmd_dashboard(args: argparse.Namespace) -> int:
+    if args.serve:
+        return serve_dashboard(args)
+
+    payload = dashboard_payload(args)
+    html = render_dashboard(payload)
+    write_dashboard_files(args, payload, html)
+
+    summary = payload.get("summary", {})
+    entity_count = summary.get("entities", 0)
+    doctor_errors = summary.get("doctor_errors", 0)
+    doctor_warnings = summary.get("doctor_warnings", 0)
+    print("SCRIBE DASHBOARD")
+    print(f"  html: {Path(args.output)}")
+    if not args.no_data:
+        print(f"  data: {Path(args.data_output)}")
+    print(f"  entities: {entity_count}")
+    print(f"  doctor: {doctor_errors} error(s), {doctor_warnings} warning(s)")
+    return 0
+
+
+def dashboard_payload(args: argparse.Namespace) -> dict[str, Any]:
+    scribe_path = Path(args.scribe)
     if args.include_values:
-        store = load_scribe(Path(args.scribe))
+        store = load_scribe(scribe_path)
         payload = export_payload(store, include_values=True)
     else:
-        payload = slim_dashboard_payload(ensure_quick_index(Path(args.scribe)).payload)
-    html = render_dashboard(payload)
+        payload = slim_dashboard_payload(ensure_quick_index(scribe_path).payload)
+    payload.update(scribe_file_state(scribe_path))
+    return payload
 
+
+def write_dashboard_files(args: argparse.Namespace, payload: dict[str, Any], html: str) -> None:
     output_path = Path(args.output)
     data_path = Path(args.data_output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -36,12 +65,76 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
         data_path.parent.mkdir(parents=True, exist_ok=True)
         data_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True, default=json_default) + "\n", encoding="utf-8")
 
-    print("SCRIBE DASHBOARD")
-    print(f"  html: {output_path}")
-    if not args.no_data:
-        print(f"  data: {data_path}")
-    print(f"  entities: {payload['summary']['entities']}")
-    print(f"  doctor: {payload['summary']['doctor_errors']} error(s), {payload['summary']['doctor_warnings']} warning(s)")
+
+def scribe_file_state(scribe_path: Path) -> dict[str, Any]:
+    raw = scribe_path.read_bytes()
+    stat = scribe_path.stat()
+    return {
+        "source_sha256": "sha256:" + hashlib.sha256(raw).hexdigest(),
+        "source_mtime_ns": stat.st_mtime_ns,
+        "source_line_count": len(raw.decode("utf-8").splitlines()),
+        "generated_at_unix": int(time.time()),
+    }
+
+
+def serve_dashboard(args: argparse.Namespace) -> int:
+    scribe_path = Path(args.scribe)
+    poll_interval_ms = max(1000, int(args.poll_interval_ms))
+
+    class DashboardRequestHandler(BaseHTTPRequestHandler):
+        def log_message(self, format: str, *values: object) -> None:
+            return
+
+        def do_GET(self) -> None:
+            route = urlparse(self.path).path
+            if route in {"/", "/dashboard", "/dashboard.html"}:
+                self.send_dashboard_html()
+                return
+            if route == "/api/scribe-state":
+                self.send_json(scribe_file_state(scribe_path))
+                return
+            if route == "/api/dashboard-data":
+                self.send_json(dashboard_payload(args))
+                return
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(b"Not found\n")
+
+        def send_dashboard_html(self) -> None:
+            payload = dashboard_payload(args)
+            html = render_dashboard(payload, live_poll_interval_ms=poll_interval_ms).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("Content-Length", str(len(html)))
+            self.end_headers()
+            self.wfile.write(html)
+
+        def send_json(self, payload: dict[str, Any]) -> None:
+            body = (json.dumps(payload, ensure_ascii=False, sort_keys=True, default=json_default) + "\n").encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer((args.host, args.port), DashboardRequestHandler)
+    server.daemon_threads = True
+    host, port = server.server_address
+    print("SCRIBE DASHBOARD LIVE", flush=True)
+    print(f"  url: http://{host}:{port}/", flush=True)
+    print(f"  source: {scribe_path}", flush=True)
+    print(f"  poll: {poll_interval_ms}ms", flush=True)
+    print("  stop: Ctrl+C", flush=True)
+    try:
+        server.serve_forever(poll_interval=0.5)
+    except KeyboardInterrupt:
+        print("\nSCRIBE DASHBOARD LIVE stopped")
+    finally:
+        server.server_close()
     return 0
 
 
@@ -49,6 +142,9 @@ def slim_dashboard_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "source": payload.get("source"),
         "schema_version": payload.get("schema_version"),
+        "source_sha256": payload.get("source_sha256"),
+        "source_mtime_ns": payload.get("source_mtime_ns"),
+        "source_line_count": payload.get("source_line_count"),
         "summary": payload.get("summary", {}),
         "tiers": payload.get("tiers", {}),
         "collections": payload.get("collections", {}),
@@ -73,7 +169,7 @@ def slim_entity(entity: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_dashboard(payload: dict[str, Any]) -> str:
+def render_dashboard(payload: dict[str, Any], live_poll_interval_ms: int | None = None) -> str:
     summary = payload.get("summary", {})
     entities = sorted(view.as_entities(payload.get("entities")), key=view.entity_priority)
     tiers = payload.get("tiers", {}) if isinstance(payload.get("tiers"), dict) else {}
@@ -211,6 +307,37 @@ def render_dashboard(payload: dict[str, Any]) -> str:
   <script type="application/json" id="scribe-data">{payload_json}</script>
   <script>{echarts_source}</script>
   <script>{DASHBOARD_JS}</script>
+  {live_reload_script(payload, live_poll_interval_ms)}
 </body>
 </html>
 """
+
+
+def live_reload_script(payload: dict[str, Any], poll_interval_ms: int | None) -> str:
+    if poll_interval_ms is None:
+        return ""
+    interval = max(1000, int(poll_interval_ms))
+    source_hash = json.dumps(str(payload.get("source_sha256") or ""))
+    return f"""<script>
+(() => {{
+  if (!window.location.protocol.startsWith("http")) return;
+  const endpoint = "/api/scribe-state";
+  const pollIntervalMs = {interval};
+  let currentHash = {source_hash};
+
+  async function checkFreshness() {{
+    try {{
+      const response = await fetch(endpoint, {{ cache: "no-store" }});
+      if (!response.ok) return;
+      const state = await response.json();
+      if (state.source_sha256 && currentHash && state.source_sha256 !== currentHash) {{
+        window.location.reload();
+        return;
+      }}
+      if (state.source_sha256) currentHash = state.source_sha256;
+    }} catch (error) {{}}
+  }}
+
+  window.setInterval(checkFreshness, pollIntervalMs);
+}})();
+</script>"""

@@ -19,6 +19,11 @@ Boundaries:
 - Do not store causal project memory here; use `AGENT-MEMOIRE_PROJECT_STATUS.scribe`.
 - Do not store generated structural graph output inside this bundle; bundle graph output belongs under `scribe-out/bundle-graph/scribe-engineering-local-causal-retrieval/`.
 - The host application graph remains `graphify-out/`; it must stay focused on application code.
+- Version only the host application and deliberate project memory by default:
+  `AGENT-MEMOIRE_PROJECT_STATUS.scribe` can be shared when the team wants causal
+  memory in Git, while `graphify-out/` and `scribe-out/` are generated local
+  state and should stay out of commits and pushes. Version `.agent/` only when
+  intentionally maintaining the agent tooling itself.
 - Active SCRIBE workflow rules live in `docs/scribe.md`.
 - Host-agent always-on summary rules live at `.agent/rules/scribe.md` in the host project; that short rule must point back here instead of duplicating the protocol.
 - Multi-agent installation and handoff rules live in `docs/multi-agent-installation.md`.
@@ -79,6 +84,8 @@ The examples below use `<SCRIBE>` for that path.
   - Dry-runs cold-entry archival by default; with `--apply`, writes archive YAML and prunes archived blocks from the active SCRIBE after doctor validation.
 - `<SCRIBE> dashboard [--output scribe-out/scribe-dashboard.html]`
   - Generates a static HTML dashboard plus JSON data file from the same indexed payload used by `<SCRIBE> export`, including retrieval-quality data.
+- `<SCRIBE> dashboard --serve [--host 127.0.0.1] [--port 8765] [--poll-interval-ms 2000]`
+  - Serves a lightweight local live view that hashes the SCRIBE file, disables HTTP caching, and reloads the dashboard when memory changes without adding external dependencies or a long-running app stack.
 - `<SCRIBE> graph [--build] [--query TEXT] [--budget N]`
   - Builds or queries a separate Graphify graph under `scribe-out/bundle-graph/` without polluting root application `graphify-out/` or this bundle.
 - `<SCRIBE> graphify-hooks [--apply] [--template PATH] [--trusted-hooks PATH]`

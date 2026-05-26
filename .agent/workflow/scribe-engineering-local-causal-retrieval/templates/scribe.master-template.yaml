@@ -6,7 +6,7 @@ meta_project:
   scribe_version: "3.2-local-causal-retrieval"
   graphify_graph: "graphify-out/graph.json"
 tiers:
-  hot: ["PAT-GRAPH-001"]
+  hot: ["PAT-GRAPH-001", "PAT-GIT-001"]
   warm: []
   cold: []
 invariants:
@@ -25,6 +25,11 @@ invariants:
     tier: "hot"
     titre: "Anti-drift closing question"
     l0_abstract: "Before closing a real coding session, ask what will hurt the next LLM if undocumented; concrete future pain becomes SCAR or GHOST, otherwise JOURNAL is enough."
+  - id: "INV-F004"
+    status: "ACTIVE"
+    tier: "hot"
+    titre: "Generated agent state stays out of product commits"
+    l0_abstract: "Version host product source by default; keep graphify-out and scribe-out out of commits unless explicitly requested."
 patterns:
   - id: "PAT-GRAPH-001"
     date: "{{DATE}}"
@@ -40,14 +45,28 @@ patterns:
       observable: "Bootstrap initialized a project with separate graphify-out, scribe-out, and SCRIBE memory surfaces."
     liens_causaux:
       source: "JOURNAL-000"
+  - id: "PAT-GIT-001"
+    date: "{{DATE}}"
+    schema_patch_date: "{{DATE}}"
+    tier: "hot"
+    status: "ACTIVE"
+    titre: "Agent artifact versioning boundary"
+    l0_abstract: "Commit/push product source by default; share AGENT-MEMOIRE_PROJECT_STATUS.scribe only when causal memory should be collaborative, never graphify-out or scribe-out by default."
+    scope: "dev"
+    evidence:
+      type: "POLICY"
+      source: "JOURNAL-000"
+      observable: "graphify-out and scribe-out are generated local state, while AGENT-MEMOIRE_PROJECT_STATUS.scribe is optional shared causal memory."
+    liens_causaux:
+      source: "JOURNAL-000"
 journal:
   - id: "JOURNAL-000"
     date: "{{DATE}}"
     mode: "STANDARD"
-    hot_entries_consulted: ["PAT-GRAPH-001"]
+    hot_entries_consulted: ["PAT-GRAPH-001", "PAT-GIT-001"]
     l0_abstract: "Bootstrap initial."
-    pourquoi: "This project received the portable SCRIBE/TENOR local causal retrieval bundle. Graphify owns structural retrieval; SCRIBE starts as a causal memory with only the minimum invariant seed."
-    scribe_delta: "PAT-GRAPH-001 | JOURNAL-000"
+    pourquoi: "This project received the portable SCRIBE/TENOR local causal retrieval bundle. Graphify owns structural retrieval; SCRIBE starts as causal memory, and generated agent runtime artifacts stay outside product commits by default."
+    scribe_delta: "PAT-GRAPH-001 | PAT-GIT-001 | JOURNAL-000"
 metrics:
   sessions_total: 1
   scars_total: 0

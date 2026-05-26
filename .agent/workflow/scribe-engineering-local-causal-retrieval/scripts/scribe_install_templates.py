@@ -78,6 +78,21 @@ Ne pas ecrire dans SCRIBE ce que Graphify peut deduire du code. Ecrire un
 SCAR ou un GHOST seulement si l'information evitera une vraie souffrance au
 prochain agent.
 
+## Hygiene Git / push
+
+- Scope par defaut: le code produit du projet hote.
+- `AGENT-MEMOIRE_PROJECT_STATUS.scribe`: a versionner seulement si l'equipe
+  veut partager la memoire causale entre agents et humains.
+- `graphify-out/`: ne pas versionner par defaut; c'est un graphe genere,
+  reconstructible avec `graphify update .`.
+- `scribe-out/`: ne pas versionner par defaut; c'est de l'etat runtime local
+  (index, locks, rapports, dashboards, exports, sync metadata).
+- `.agent/`: a versionner seulement quand l'equipe maintient volontairement
+  l'outillage agentique; sinon le garder hors des commits produit.
+
+Avant livraison, utiliser `{BUNDLE_COMMAND} worktree` pour separer source
+reelle, memoire causale validee, tooling volontaire et bruit genere.
+
 ## Intention finale obligatoire
 
 Avant de fermer une vraie session de coding, poser cette question:
@@ -198,6 +213,7 @@ Critical local rules:
 - Read `graphify-out/GRAPH_REPORT.md` before architecture or codebase work when it exists.
 - Keep root `graphify-out/` focused on application code; SCRIBE/TENOR tooling is ignored by root `.graphifyignore`.
 - Use `{BUNDLE_COMMAND} graph --build` and `{BUNDLE_COMMAND} graph --query "..."` for a separate bundle graph under `scribe-out/bundle-graph/`.
+- Default commit/push scope is the host product source. Version `AGENT-MEMOIRE_PROJECT_STATUS.scribe` only when shared causal memory is desired; keep `graphify-out/` and `scribe-out/` out of commits by default; version `.agent/` only when intentionally maintaining agent tooling.
 - Choose the smallest safe tier from `docs/friction-policy.md`; READ_ONLY skips doctor/SCRIBE writes, QUICK skips full ceremony unless risk escalates.
 - Prefer `{BUNDLE_COMMAND} context --mode quick|standard` for compact grounding instead of chaining multiple SCRIBE commands.
 - Use `{BUNDLE_COMMAND} eval` to measure local causal retrieval quality before changing scoring, ranking, or tier policy.

@@ -548,7 +548,31 @@ class ScribeMemoryCommandTests(unittest.TestCase):
         self.assertTrue(data["summary"]["index_complete"])
         self.assertIn("retrieval_quality", data)
         self.assertIn("recommendations", data)
+        self.assertIn("source_sha256", data)
+        self.assertNotIn("/api/scribe-state", html)
 
+    def test_dashboard_live_reload_script_is_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = write_fixture(root)
+            dashboard_module = load_script_module("scribe_memory_dashboard")
+            render_dashboard = getattr(dashboard_module, "render_dashboard")
+            scribe_file_state = getattr(dashboard_module, "scribe_file_state")
+            payload = {
+                "source": str(path),
+                "schema_version": "test",
+                "summary": {"entities": 0, "doctor_errors": 0, "doctor_warnings": 0, "edges": {}},
+                "tiers": {},
+                "entities": [],
+            }
+            payload.update(scribe_file_state(path))
+            static_html = render_dashboard(payload)
+            live_html = render_dashboard(payload, live_poll_interval_ms=500)
+
+        self.assertNotIn("/api/scribe-state", static_html)
+        self.assertIn("/api/scribe-state", live_html)
+        self.assertIn("pollIntervalMs = 1000", live_html)
+        self.assertIn(payload["source_sha256"], live_html)
 
     def test_worktree_classifies_generated_noise(self) -> None:
         worktree = load_script_module("scribe_worktree")
@@ -594,6 +618,8 @@ class ScribeMemoryCommandTests(unittest.TestCase):
         self.assertFalse((BUNDLE_ROOT / "adapters" / "root" / "scripts").exists())
         self.assertEqual(str(getattr(install, "BUNDLE_RELATIVE_PATH")), expected_path)
         self.assertIn("multi-agent-installation.md", agents_block)
+        self.assertIn("Default commit/push scope is the host product source", agents_block)
+        self.assertIn("keep `graphify-out/` and `scribe-out/` out of commits", agents_block)
         self.assertIn(".agent/rules/scribe.md", agents_block)
         self.assertIn("docs/scribe.md", getattr(templates, "render_scribe_rule")())
         self.assertIn(expected_name, adapter)
