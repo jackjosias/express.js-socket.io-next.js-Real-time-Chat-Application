@@ -30,6 +30,91 @@ reconstructible from the product source plus the SCRIBE commands. Run
 `<SCRIBE> worktree` before delivery to separate source changes from generated
 noise.
 
+## PRÉFLIGHT STANDARD V4
+
+Command convention from a host project root:
+
+```bash
+SCRIBE=.agent/workflow/scribe-engineering-local-causal-retrieval/scribe
+SCRIBE_RAG=.agent/workflow/scribe-rag/scribe-rag
+```
+
+### Étape 0 — Bootstrap
+
+```bash
+$SCRIBE bootstrap
+```
+
+### Étape 1 — Contexte mémoire
+
+```bash
+$SCRIBE_RAG build
+$SCRIBE_RAG context
+```
+
+### Étape 2 — Structure code
+
+```bash
+graphify update .   # only when app code changed since the last graph refresh
+sed -n '1,100p' graphify-out/GRAPH_REPORT.md
+```
+
+Graphify has no `--surface` mode. Surfaces are a SCRIBE/protocol concept, not a Graphify concept.
+
+### Avant toute implémentation significative
+
+```bash
+$SCRIBE_RAG challenge "<description précise du plan>"
+```
+
+Verdicts:
+- `STOP`: do not implement; read the BLOCK and revise the plan.
+- `REVIEW`: read WARNs, then decide explicitly.
+- `PROCEED`: implement.
+
+### Signal Hybrid
+
+If `$SCRIBE_RAG eval --force` returns less than `7/8`:
+
+```bash
+pip install sentence-transformers --break-system-packages
+$SCRIBE_RAG build --with-embeddings --force
+```
+
+After that build, the hybrid index is used automatically. BM25 remains canonical while eval stays `>= 7/8`.
+
+## POSTFLIGHT STANDARD V4
+
+Ask before closing a real coding session:
+
+> "Qu'est-ce qui fera souffrir le prochain LLM si je ne le documente pas ?"
+
+If the answer is concrete future pain, write a SCAR or GHOST. If not, a JOURNAL entry is enough.
+
+```bash
+$SCRIBE_RAG doctor
+$SCRIBE sync --agent <nom> --type <extension|cli|api|unknown>
+$SCRIBE lock release --agent <nom>
+git diff --check
+```
+
+Never use these for normal agent retrieval:
+- `$SCRIBE context` (SEL direct)
+- `$SCRIBE query` (SEL direct)
+- `$SCRIBE explain` (SEL direct)
+- SEL direct challenge
+- Archiving SEL while scribe-rag depends on it
+
+## Multi-Agent V4
+
+- One exclusive surface per agent maximum.
+- Agents read memory through scribe-rag; they do not read the `.scribe` file directly.
+- SEL lock is mandatory before SCRIBE writes.
+- `scribe sync` is mandatory before work and after memory repair.
+- `scribe worktree --strict` is mandatory before delivery in coordinated multi-agent work.
+- The orchestrator owns surface attribution and Git conflict resolution.
+
+
 Rules:
 - At the start of a copied `.agent` installation, run `<SCRIBE> bootstrap`; it is idempotent and initializes only missing Graphify/SCRIBE/scribe-out surfaces.
 - Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure

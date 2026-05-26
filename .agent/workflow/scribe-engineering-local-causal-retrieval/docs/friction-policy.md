@@ -1,60 +1,71 @@
-# Agentic Friction Policy
+# Agentic Friction Policy V4
 
-Version: `2026-05-23`
+Version: `2026-05-26`
 
-This policy reduces SCRIBE/TENOR runtime overhead without replacing the full
-protocol in `docs/scribe.md`. The full protocol remains authoritative for
-high-risk work; this file defines the fast path agents should use for ordinary
-coding sessions.
+This policy chooses the smallest safe workflow tier. It does not replace
+`docs/scribe.md`; it defines when to pay the full ceremony cost.
 
-Command convention: from a host project root, `<SCRIBE>` means
-`.agent/workflow/scribe-engineering-local-causal-retrieval/scribe`. Root
-`./scribe` and root `scripts/` are optional legacy adapters, not required by
-the default workflow.
+Command convention from a host project root:
+
+```bash
+SCRIBE=.agent/workflow/scribe-engineering-local-causal-retrieval/scribe
+SCRIBE_RAG=.agent/workflow/scribe-rag/scribe-rag
+```
+
+SEL is the internal guard/write engine. scribe-rag is the only agent retrieval
+interface.
 
 ## Decision Tiers
 
 | Tier | Trigger | Required Memory Work |
 | --- | --- | --- |
-| `READ_ONLY` | Explain, inspect, status, audit with no writes | Read Graphify only if structure matters; use SCRIBE query/hot only if history matters; do not write SCRIBE. |
-| `QUICK` | One narrow edit, low blast radius | Read relevant hot memories; run focused validation; write SCRIBE only if a new lesson was learned. |
-| `STANDARD` | Normal feature, fix, refactor, or tooling change | Graphify for structure; SCRIBE challenge for the plan; focused tests; causal SCRIBE delta when durable knowledge changed. |
-| `CRITICAL` | Auth, data, public API, migrations, shared contracts, destructive actions | Full Graphify/SCRIBE/doctor guard, tests/lint/build, and causal SCRIBE delta. |
+| `READ_ONLY` | Explain, inspect, status, no writes | `$SCRIBE_RAG context` only if memory matters. No build, no challenge, no doctor, no SCRIBE write. |
+| `QUICK` | One narrow edit, low blast radius | `$SCRIBE_RAG build` only if the index is stale; `$SCRIBE_RAG context`; `$SCRIBE_RAG challenge` only if implementation is non-trivial. |
+| `STANDARD` | Normal feature, fix, refactor, docs, tests, or tooling | Full preflight V4: scribe-rag build/context, Graphify report, challenge before implementation, focused validation. |
+| `CRITICAL` | Auth, data, public API, migrations, shared contracts, destructive or multi-agent coordination | Full preflight V4 plus SEL guard/lock/sync for SCRIBE writes, all challenges documented, SCAR required when a bug is resolved. |
 
 ## Automatic Selection
-
-Agents must choose the lowest tier that satisfies the observed risk. Escalation is explicit:
 
 1. No file writes and no state mutation -> `READ_ONLY`.
 2. One narrow edit, <=30 expected changed lines, no shared contract -> `QUICK`.
 3. Normal code, docs, tests, or bundle tooling changes -> `STANDARD`.
-4. Auth, data integrity, public API, destructive actions, or SCRIBE rewrites -> `CRITICAL`.
+4. Auth, data integrity, public API, destructive actions, SCRIBE mutations, or multi-agent coordination -> `CRITICAL`.
 
-Hard skips:
+## Hard Skips
 
-- `READ_ONLY`: do not run doctor, do not write SCRIBE, and do not build a bundle graph unless the question is about bundle architecture.
-- `QUICK`: prefer `<SCRIBE> context --mode quick --topic "<work>"` or `<SCRIBE> hot --topic "<work>"` when memory is relevant; run focused validation; skip journal unless a durable lesson was learned.
-- Escalate only when the blast radius grows, validation fails, or a hot scar/vaccin directly applies.
+- `READ_ONLY`: do not build indexes, run doctor, acquire locks, or write SCRIBE.
+- `QUICK`: keep validation focused; skip JOURNAL unless durable causal knowledge was learned.
+- Escalate only when blast radius grows, validation fails, or a hot SCAR/VAC/GHOST directly applies.
 
 ## Guardrails
 
-- Prefer `<SCRIBE> challenge "<plan>"` over manually rereading the full SCRIBE.
-- Prefer `<SCRIBE> context --mode quick|standard` over chaining `hot`, `stats`, `query`, and `doctor` for routine grounding.
-- Prefer `<SCRIBE> context --format json` when an agent needs a machine-readable grounding packet.
-- Run `<SCRIBE> eval` before and after scoring, ranking, or tier-policy changes.
-- Prefer `<SCRIBE> worktree` before delivery to separate source changes from generated noise.
-- Use `<SCRIBE> review-hot` when hot memory exceeds the retrieval budget instead of manually editing tiers; overflow should move warm first, then cold.
-- Use `<SCRIBE> benchmark --entities 1000,10000` before claiming retrieval performance at scale.
-- Use `<SCRIBE> graph --build` only when the bundle architecture matters.
+- Use `$SCRIBE_RAG challenge "<plan>"` before significant implementation.
+- Use `$SCRIBE_RAG context` for grounding; do not use SEL direct `context`, `query`, or `explain` as an agent interface.
+- Use `$SCRIBE_RAG eval --force` before and after retrieval scoring/ranking changes.
+- Use `$SCRIBE doctor --suggest-fix`, `$SCRIBE lock`, and `$SCRIBE sync` only for SCRIBE writes and maintenance.
+- Use `$SCRIBE worktree` before delivery to separate source changes from generated noise.
+- Use `$SCRIBE graph --build` only when the bundle architecture matters.
 - Do not run doctor for pure read-only answers.
 - Do not add journal entries for command relays, status answers, or trivial edits.
+
+## Hybrid Signal
+
+If `$SCRIBE_RAG eval --force` drops below `7/8`:
+
+```bash
+pip install sentence-transformers --break-system-packages
+$SCRIBE_RAG build --with-embeddings --force
+```
+
+BM25 remains canonical while eval stays `>= 7/8`.
 
 ## Success Criteria
 
 The policy is working when:
 
 - small fixes do not pay the full ritual cost;
-- critical changes still run doctor before and after SCRIBE edits;
+- critical changes still run doctor/lock/sync around SCRIBE writes;
+- agents never call SEL directly for retrieval;
 - app Graphify remains focused on application code;
-- bundle architecture is available through its own graph;
+- bundle architecture remains available through `scribe-out/bundle-graph/`;
 - agents spend more time changing the right code and less time rereading policy.

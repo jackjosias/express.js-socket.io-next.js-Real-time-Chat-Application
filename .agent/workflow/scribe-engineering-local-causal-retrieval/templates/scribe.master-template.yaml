@@ -63,10 +63,15 @@ journal:
   - id: "JOURNAL-000"
     date: "{{DATE}}"
     mode: "STANDARD"
+    agent_type: "unknown"
+    surface: ""
     hot_entries_consulted: ["PAT-GRAPH-001", "PAT-GIT-001"]
     l0_abstract: "Bootstrap initial."
     pourquoi: "This project received the portable SCRIBE/TENOR local causal retrieval bundle. Graphify owns structural retrieval; SCRIBE starts as causal memory, and generated agent runtime artifacts stay outside product commits by default."
     scribe_delta: "PAT-GRAPH-001 | PAT-GIT-001 | JOURNAL-000"
+    multi_agent_context:
+      surface: ""
+      other_agents_active: []
 metrics:
   sessions_total: 1
   scars_total: 0

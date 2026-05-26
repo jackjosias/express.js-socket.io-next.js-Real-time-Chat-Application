@@ -2,73 +2,63 @@
 trigger: always_on
 ---
 
-# SCRIBE — REGLE ALWAYS-ON
+# RÈGLES SCRIBE — VERSION FINALE V4
 
-Ce fichier est une regle courte pour les LLM hotes. Il ne remplace pas le
-protocole complet.
+## Architecture mémorielle
 
-## Source canonique
+- SEL = moteur interne. Ne pas l'appeler pour le retrieval agent.
+- scribe-rag = seule interface agent pour lecture, contexte, query, explain et challenge.
+- SCRIBE = source de vérité causale append-only.
+- Graphify = source de vérité structurelle du code.
 
-- SEL moteur interne: `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe`
-- Interface retrieval agent: `.agent/workflow/scribe-rag/scribe-rag`
-- Protocole canonique: `.agent/workflow/scribe-engineering-local-causal-retrieval/docs/scribe.md`
-- Regles locales: `.agent/workflow/scribe-engineering-local-causal-retrieval/docs/AGENTS.md`
-- Installation multi-agent: `.agent/workflow/scribe-engineering-local-causal-retrieval/docs/multi-agent-installation.md`
+## Règle d'or
 
-Ne jamais utiliser `.agent/workflows/scribe.md` ni
-`docs/archive/scribe.v3.1.md.old` comme source active. Ce sont des chemins
-historiques ou archives.
-
-## Reflexe de demarrage
-
-Depuis la racine du projet:
+Avant toute implémentation significative :
 
 ```bash
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe bootstrap
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe sync --agent <name> --type <extension|cli|api|unknown>
-.agent/workflow/scribe-rag/scribe-rag build
-.agent/workflow/scribe-rag/scribe-rag context
+.agent/workflow/scribe-rag/scribe-rag challenge "<plan>"
 ```
 
-`bootstrap` est idempotent. Il initialise seulement ce qui manque:
-`AGENT-MEMOIRE_PROJECT_STATUS.scribe`, `scribe-out/`, `state.json`,
-`.graphifyignore` et le bloc gere de `AGENTS.md`.
+- `STOP` = ne pas faire.
+- `REVIEW` = lire puis décider explicitement.
+- `PROCEED` = faire.
 
-## Reflexe avant mutation SCRIBE
+## Ce que le SCRIBE documente
 
-Avant toute commande qui modifie la memoire:
+À écrire dans SCRIBE :
+- Pourquoi on a choisi X plutôt que Y.
+- Ce bug arrive quand on oublie Z.
+- Cette approche a échoué parce que W.
+- Ne jamais reproposer cette option.
+
+À ne pas écrire dans SCRIBE :
+- Le fichier X importe Y; Graphify le sait.
+- La fonction Z fait A; Graphify le sait.
+- La lib X est en version Y; le package manager le sait.
+
+## Signal Hybrid
+
+Si `scribe-rag eval --force` retourne moins de `7/8` :
 
 ```bash
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe doctor --suggest-fix
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe lock acquire --agent <name> --type <extension|cli|api|unknown> --session <JOURNAL-ID>
+pip install sentence-transformers --break-system-packages
+.agent/workflow/scribe-rag/scribe-rag build --with-embeddings --force
 ```
 
-Apres validation:
+BM25 reste canonique tant que l'eval reste `>= 7/8`.
 
-```bash
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe doctor --suggest-fix
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe sync --repair --agent <name> --type <extension|cli|api|unknown> --session <JOURNAL-ID>
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe lock release --agent <name>
-```
+## Multi-agent
 
-Les commandes SEL read-only de maintenance (`explain`, `related`, `stats`, `doctor`)
-ne doivent pas etre bloquees par le lock. Pour le retrieval agent, ne pas appeler
-`scribe context` ni `scribe query` directement; utiliser `scribe-rag`.
+- 1 surface = 1 agent maximum.
+- Lock SEL avant toute écriture SCRIBE.
+- `scribe sync` avant tout travail et après toute réparation mémoire.
+- `scribe worktree --strict` avant livraison.
+- Les agents ne lisent jamais le `.scribe` directement; ils utilisent scribe-rag.
 
-## Separation Graphify / SCRIBE
+## Commandes interdites pour retrieval agent
 
-- Graphify = structure du code: quoi, ou, comment.
-- SCRIBE = causalite: pourquoi, douleur, decision, cicatrice.
-
-Ne pas ecrire dans SCRIBE ce que Graphify peut deduire du code. Ecrire un
-SCAR ou un GHOST seulement si l'information evitera une vraie souffrance au
-prochain agent.
-
-## Intention finale obligatoire
-
-Avant de fermer une vraie session de coding, poser cette question:
-
-> "Qu'est-ce qui fera souffrir le prochain LLM si je ne le documente pas ?"
-
-Si la reponse est une douleur concrete, la graver en SCAR ou GHOST. Sinon, le
-JOURNAL suffit.
+- `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe context`
+- `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe query`
+- `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe explain`
+- SEL direct challenge
+- Archiver SEL tant que scribe-rag l'utilise

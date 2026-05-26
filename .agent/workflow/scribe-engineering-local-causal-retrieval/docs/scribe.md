@@ -10,70 +10,75 @@
 # ════════════════════════════════════════════════════════════════════════════════
 
 # ════════════════════════════════════════════════════════════════════════════════
-# 🧠 PROTOCOLE AXIAL-SCRIBE V3.2 — HYBRIDE + GRAPHIFY 2026
+# 🧠 PROTOCOLE AXIAL-SCRIBE V4 — GRAPHIFY + SEL INTERNAL + SCRIBE-RAG
 # ════════════════════════════════════════════════════════════════════════════════
 # description: Protocole SCRIBE - Mémoire CAUSALE persistante pour LLMs
-# version: V3.2 (Hybride + Graphify-aware + Doctor-ready)
-# schema_patch_date: 2026-05-23
-# PRINCIPE FONDAMENTAL V3.2 :
+# version: V4 (Graphify-aware + SEL internal + scribe-rag canonical)
+# schema_patch_date: 2026-05-26
+# PRINCIPE FONDAMENTAL V4 :
 #   Le SCRIBE ne documente QUE ce que Graphify ne peut pas déduire.
-#   Graphify = mémoire STRUCTURELLE (le QUOI / le OÙ)
-#   SCRIBE   = mémoire CAUSALE     (le POURQUOI / le COMMENT ON A SOUFFERT)
+#   Graphify  = mémoire STRUCTURELLE (le QUOI / le OÙ / le COMMENT)
+#   SEL       = moteur interne de garde/écriture, jamais interface agent retrieval
+#   scribe-rag = interface agent unique pour lecture, contexte et challenge
 # ════════════════════════════════════════════════════════════════════════════════
 
 # ════════════════════════════════════════════════════════════════════════════════
-# 🗺️ PARTIE 0 — ARCHITECTURE MÉMORIELLE HYBRIDE (V3.2)
+# 🗺️ PARTIE 0 — ARCHITECTURE MÉMORIELLE V4 — FINALE
 # ════════════════════════════════════════════════════════════════════════════════
 #
-# Le projet dispose de DEUX couches de mémoire complémentaires :
+# COUCHE 1 — GRAPHIFY
+#   graphify-out/              → graphe applicatif hôte.
+#   scribe-out/bundle-graph/   → graphe du bundle SEL pour maintenance tooling.
+#   Rôle                       → structure du code: imports, call graph, god-nodes,
+#                                communautés, blast radius, relations EXTRACTED/INFERRED.
+#   Commandes app              → graphify query "..." | graphify path "A" "B" |
+#                                graphify explain "X" | graphify update .
+#   Règle                      → Graphify ne connaît pas les surfaces multi-agent;
+#                                les surfaces sont une règle SCRIBE/protocole.
 #
-# COUCHE 1 — GRAPHIFY (mémoire structurelle, toujours à jour)
-#   Fichier  : graphify-out/GRAPH_REPORT.md  (résumé ~500 tokens)
-#   Fichier  : graphify-out/graph.json       (graphe complet requêtable)
-#   Contient : AST, call graphs, imports, god-nodes, communautés, dépendances,
-#              blast radius, connexions surprenantes, structure des fichiers.
-#   Règle    : LIRE graphify-out/GRAPH_REPORT.md AVANT toute question codebase.
-#   Commandes: graphify query "..." | graphify path "A" "B" | graphify explain "X"
-#   Mise à jour : automatique via `graphify watch .` (watch actif en permanence)
-#   Scope    : Le graphe canonique doit rester centré sur l'application.
-#              Exclure les outils agent/SCRIBE/TENOR via `.graphifyignore`.
-#              Pour l'app : `graphify query "APP_SCOPE <projet> ..."`
-#              Pour le tooling SCRIBE : utiliser le graphe bundle séparé sous
-#              `scribe-out/bundle-graph/`, jamais polluer le graphe app.
+# COUCHE 2 — SEL (moteur interne uniquement)
+#   Dossier   : .agent/workflow/scribe-engineering-local-causal-retrieval/
+#   CLI       : .agent/workflow/scribe-engineering-local-causal-retrieval/scribe
+#   Règle     : ne jamais appeler directement depuis AGENTS.md pour retrieval,
+#               contexte, query, explain ou challenge agent.
+#   Appelé par: scribe-rag via CLI canonique et export JSON.
+#   Responsabilités:
+#     - bootstrap portable
+#     - doctor et validation SCRIBE
+#     - lock, state, sync multi-agent
+#     - export/archive
+#     - graph bundle
+#     - écritures SCRIBE et garde-fous d'écriture
 #
-# CLARIFICATION GRAPHIFY DUAL :
-#   `graphify-out/`              = graphe du projet applicatif hôte.
-#   `scribe-out/bundle-graph/`   = graphe généré du bundle SCRIBE lui-même.
-#   Le premier guide le codage application; le second guide la maintenance de
-#   l'outil SCRIBE. Ne jamais les fusionner.
+# COUCHE 3 — SCRIBE-RAG BM25 (seule interface agent)
+#   Dossier   : .agent/workflow/scribe-rag/
+#   CLI       : .agent/workflow/scribe-rag/scribe-rag
+#   Rôle      : toutes les lectures mémoire agent passent par scribe-rag.
+#   Commandes : build, context, query, explain, challenge, eval, doctor.
+#   Mode      : BM25 par défaut, portable, sans dépendance externe.
+#   Lecture   : les agents ne lisent jamais AGENT-MEMOIRE_PROJECT_STATUS.scribe
+#               directement; scribe-rag consomme SEL/export puis son index.
 #
-# COUCHE 2 — SCRIBE (mémoire causale, enrichie à chaque session)
-#   Fichier  : AGENT-MEMOIRE_PROJECT_STATUS.scribe
-#   Contient : SCARs, VACs, PATs, GHOSTs, DEBTs, ADRs, LESSIONs, Journal
-#   Contient : UNIQUEMENT ce que Graphify ne peut pas déduire du code
+# SIGNAL HYBRID
+#   Si `scribe-rag eval --force` descend sous 7/8 :
+#     1. Installer sentence-transformers.
+#     2. Lancer `scribe-rag build --with-embeddings --force`.
+#     3. Le mode hybrid devient actif via l'index reconstruit.
+#   Tant que eval >= 7/8, BM25 reste le système canonique portable.
 #
-# COUCHE 3 — SCRIBE LOCAL CAUSAL RETRIEVAL (bundle portable actif)
-#   Dossier  : .agent/workflow/scribe-engineering-local-causal-retrieval/
-#   Contient : specs, designs, benchmarks et plans des futures commandes
-#              query/explain/related/challenge.
-#   Règle    : rien dans ce dossier ne devient loi active tant que ce n'est pas
-#              promu explicitement dans ce fichier `docs/scribe.md`.
+# RÈGLE ABSOLUE V4
+#   Un agent ne doit JAMAIS appeler SEL directement pour du retrieval ou du contexte.
+#   scribe-rag uniquement. SEL reste le moteur sous le capot.
 #
-# HYGIÈNE VCS / PUSH :
+# HYGIÈNE VCS / PUSH
 #   Le scope de commit/push par défaut est le produit applicatif hôte.
-#   `AGENT-MEMOIRE_PROJECT_STATUS.scribe` peut être versionné quand l'équipe
-#   veut partager la mémoire causale entre agents/humains.
-#   `graphify-out/` ne se versionne pas par défaut : c'est un graphe généré,
-#   reconstructible par `graphify update .`.
-#   `scribe-out/` ne se versionne pas par défaut : c'est de l'état runtime
-#   local (index, locks, rapports, exports, dashboards, sync metadata).
-#   `.agent/` ne se versionne que si l'équipe maintient volontairement
-#   l'outillage agentique; hors maintenance tooling, l'exclure des commits
-#   produit.
-#   Avant livraison : utiliser `<SCRIBE> worktree` pour séparer source réelle,
-#   mémoire causale validée, tooling volontaire et bruit généré.
+#   `AGENT-MEMOIRE_PROJECT_STATUS.scribe` peut être versionné quand l'équipe veut
+#   partager la mémoire causale entre agents/humains.
+#   `graphify-out/` ne se versionne pas par défaut : c'est un graphe généré.
+#   `scribe-out/` ne se versionne pas par défaut : c'est de l'état runtime local.
+#   `.agent/` ne se versionne que si l'équipe maintient volontairement l'outillage.
 #
-# RÈGLE ABSOLUE D'ÉCRITURE SCRIBE :
+# RÈGLE ABSOLUE D'ÉCRITURE SCRIBE
 #   ❌ NE PAS écrire : "Le fichier X importe Y"          → Graphify le sait
 #   ❌ NE PAS écrire : "La fonction Z fait A"            → Graphify le sait
 #   ❌ NE PAS écrire : "La lib X est en version Y"       → Graphify lit package.json
@@ -126,11 +131,11 @@
 # 3.0 CYCLE OPÉRATIONNEL PAR TÂCHE RÉELLE — NON-NÉGOCIABLE
 #   Pour chaque tâche concrète sur jjk-messenger :
 #   1. Lire graphify-out/GRAPH_REPORT.md avant de comprendre le code
-#   2. Lire le SCRIBE pertinent : hot intégral, warm ciblé selon la tâche
-#   3. Lancer scribe doctor AVANT toute évolution du SCRIBE
+#   2. Lancer `scribe-rag build` si l'index est stale, puis `scribe-rag context`
+#   3. Avant toute implémentation significative : `scribe-rag challenge "<plan>"`
 #   4. Implémenter de façon ciblée, sans régression
 #   5. Valider par tests/lint/build adaptés au périmètre
-#   6. Écrire le delta causal dans AGENT-MEMOIRE_PROJECT_STATUS.scribe
+#   6. Écrire le delta causal dans AGENT-MEMOIRE_PROJECT_STATUS.scribe seulement si une mémoire durable est utile
 #      └── Question finale obligatoire :
 #          "Qu'est-ce qui fera souffrir le prochain LLM si je ne le documente pas ?"
 #          Réponse concrète → SCAR/GHOST. Pas de réponse → JOURNAL seulement.
@@ -139,10 +144,10 @@
 #
 # RÈGLE SIMPLE :
 #   Graphify avant de comprendre le code.
-#   SCRIBE avant de décider.
+#   scribe-rag avant de décider.
 #   SCRIBE après avoir appris.
-#   scribe doctor AVANT d'écrire la mémoire.
-#   scribe doctor APRÈS avoir écrit la mémoire.
+#   SEL doctor AVANT d'écrire la mémoire.
+#   SEL doctor APRÈS avoir écrit la mémoire.
 #   scribe doctor ne complète rien : il vérifie seulement.
 #   scribe doctor écrit ses rapports Markdown dans `scribe-out/`, jamais à la racine.
 #
@@ -164,14 +169,14 @@
 #   ├── LIS [AXIAL_NEXUS_CORE] du .scribe         (invariants)
 #   ├── LIS les l0_abstract Tier HOT du .scribe   (mémoire causale)
 #   ├── LIS [EPISODIC_SCAFFOLDING] du .scribe     (contexte immédiat)
-#   └── AFFICHE le SCRIBE-CHECK V3.2
+#   └── AFFICHE le SCRIBE-CHECK V4
 #
 # 3.1.5 CHALLENGE (Avant toute implémentation significative)
-#   ├── LIS tous les GHOSTs liés aux modules touchés
-#   ├── LIS tous les VACs avec scope matching le plan
-#   ├── LIS tous les SCARs HOT des modules concernés
-#   ├── POSE : "Suis-je en train de refaire un ne_pas_reproposer ou un VAC ?"
-#   └── SI OUI → STOP. Documenter le conflit avant de continuer.
+#   ├── Lance `scribe-rag challenge "<description précise du plan>"`
+#   ├── STOP   → ne pas implémenter; lire le BLOCK et corriger la stratégie
+#   ├── REVIEW → lire les WARNs puis décider explicitement
+#   ├── PROCEED → implémenter
+#   └── Ne jamais remplacer ce challenge par un appel SEL direct.
 #
 # 3.2 PHASE 2 : GATHER SIGNAL (Pendant la tâche)
 #   ├── Pour toute question structure/dépendance → graphify query "..."
@@ -196,10 +201,10 @@
 # ════════════════════════════════════════════════════════════════════════════════
 
 # ════════════════════════════════════════════════════════════════════════════════
-# 📜 PARTIE 4 — SCRIBE-CHECK V3.2 (PREUVE DE LECTURE OBLIGATOIRE)
+# 📜 PARTIE 4 — SCRIBE-CHECK V4 (PREUVE DE LECTURE OBLIGATOIRE)
 # ════════════════════════════════════════════════════════════════════════════════
 #
-# 📜 SCRIBE-CHECK V3.2 [AXIAL/HYBRIDE + GRAPHIFY]:
+# 📜 SCRIBE-CHECK V4 [AXIAL/HYBRIDE + GRAPHIFY]:
 # ├── GRAPHIFY LU          : ✅ GRAPH_REPORT.md consulté
 # ├── GOD NODES ACTIFS     : [Liste des god-nodes lus depuis GRAPH_REPORT.md]
 # ├── NEXUS CORE           : ✅ Invariants chargés
