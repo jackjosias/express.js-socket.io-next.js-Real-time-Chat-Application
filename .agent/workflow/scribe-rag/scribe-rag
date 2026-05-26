@@ -16,6 +16,7 @@ from rag_eval import format_eval, run_eval
 from rag_index import INDEX_VERSION, RAG_INDEX_PATH, build_index, read_index
 from rag_interface import doctor, source_snapshot
 from rag_scoring import retrieve
+from rag_whoami import format_whoami
 
 
 def current_index(force: bool = False, *, with_embeddings: bool | None = None):
@@ -88,6 +89,11 @@ def cmd_doctor(args):
     return 0
 
 
+def cmd_whoami(args):
+    print(format_whoami(), end="")
+    return 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(prog="scribe-rag", description="Read-only compact retrieval layer over canonical SCRIBE SEL.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -121,6 +127,8 @@ def build_parser():
     eval_parser.set_defaults(func=cmd_eval)
     doctor_parser = sub.add_parser("doctor")
     doctor_parser.set_defaults(func=cmd_doctor)
+    whoami_parser = sub.add_parser("whoami")
+    whoami_parser.set_defaults(func=cmd_whoami)
     return parser
 
 

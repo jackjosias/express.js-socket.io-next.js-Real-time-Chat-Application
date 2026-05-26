@@ -26,7 +26,12 @@ Hybrid is recommended only when `scribe-rag eval --force` drops below `7/8`.
 .agent/workflow/scribe-rag/scribe-rag challenge "<plan>"
 .agent/workflow/scribe-rag/scribe-rag eval [--force]
 .agent/workflow/scribe-rag/scribe-rag doctor
+.agent/workflow/scribe-rag/scribe-rag whoami
 ```
+
+## État local
+
+`scribe-rag whoami` reports the last SCRIBE writer, last session, lock status, lock owner/surface when locked, index mode, and the eval command to run. It is read-only.
 
 ## Décision canonique
 

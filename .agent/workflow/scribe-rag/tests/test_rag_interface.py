@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import shutil
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -9,6 +11,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from rag_interface import SEL_CLI, export_scribe
+from rag_whoami import format_whoami
 
 class RagInterfaceTests(unittest.TestCase):
     def test_sel_cli_resolves_to_canonical_path(self) -> None:
@@ -26,6 +29,33 @@ class RagInterfaceTests(unittest.TestCase):
         self.assertIn("entities", payload)
         self.assertIsInstance(payload["entities"], list)
         self.assertTrue(any(item.get("id") == "GHOST-005" for item in payload["entities"] if isinstance(item, dict)))
+
+    def test_whoami_reports_state_lock_and_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = root / "state.json"
+            lock_path = root / "locks" / "scribe.lock"
+            index_path = root / "rag-index.json"
+            lock_path.parent.mkdir(parents=True)
+            state_path.write_text(
+                json.dumps({"writer": {"agent": "agent-a"}, "last_session": "JOURNAL-123"}),
+                encoding="utf-8",
+            )
+            lock_path.write_text(
+                json.dumps({"agent": "agent-b", "surface": "auth", "acquired_at": "2026-05-26T10:00:00Z"}),
+                encoding="utf-8",
+            )
+            index_path.write_text(json.dumps({"mode": "bm25"}), encoding="utf-8")
+
+            output = format_whoami(state_path=state_path, lock_path=lock_path, index_path=index_path)
+
+            self.assertIn("Last writer : agent-a", output)
+            self.assertIn("Last session: JOURNAL-123", output)
+            self.assertIn("Lock status : locked", output)
+            self.assertIn("Lock owner  : agent-b", output)
+            self.assertIn("Lock surface: auth", output)
+            self.assertIn("Index mode  : bm25", output)
+
 
 if __name__ == "__main__":
     unittest.main()
