@@ -91,6 +91,10 @@ NEGATIVE_GENERIC_TERMS = {
     "token",
     "vide",
 }
+NEGATIVE_REQUIRED_GROUPS = (
+    {"direct", "directe", "directement"},
+    {"archive", "archiver", "archivage"},
+)
 
 
 def negative_matches(query: str, index: dict[str, Any]) -> list[dict[str, Any]]:
@@ -105,6 +109,8 @@ def negative_matches(query: str, index: dict[str, Any]) -> list[dict[str, Any]]:
         if not term_tokens:
             continue
         overlap = query_tokens & term_tokens
+        if any(group & term_tokens and not group & query_tokens for group in NEGATIVE_REQUIRED_GROUPS):
+            continue
         blocker_overlap = overlap & NEGATIVE_BLOCKER_TERMS
         meaningful_overlap = overlap - NEGATIVE_GENERIC_TERMS
         meaningful_term_tokens = term_tokens - NEGATIVE_GENERIC_TERMS

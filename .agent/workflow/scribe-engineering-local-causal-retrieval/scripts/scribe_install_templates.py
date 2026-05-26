@@ -26,7 +26,8 @@ protocole complet.
 
 ## Source canonique
 
-- CLI canonique: `{BUNDLE_COMMAND}`
+- SEL moteur interne: `{BUNDLE_COMMAND}`
+- Interface retrieval agent: `.agent/workflow/scribe-rag/scribe-rag`
 - Protocole canonique: `{BUNDLE_RELATIVE_PATH}/docs/scribe.md`
 - Regles locales: `{BUNDLE_RELATIVE_PATH}/docs/AGENTS.md`
 - Installation multi-agent: `{BUNDLE_RELATIVE_PATH}/docs/multi-agent-installation.md`
@@ -42,7 +43,8 @@ Depuis la racine du projet:
 ```bash
 {BUNDLE_COMMAND} bootstrap
 {BUNDLE_COMMAND} sync --agent <name> --type <extension|cli|api|unknown>
-{BUNDLE_COMMAND} context --mode quick
+.agent/workflow/scribe-rag/scribe-rag build
+.agent/workflow/scribe-rag/scribe-rag context
 ```
 
 `bootstrap` est idempotent. Il initialise seulement ce qui manque:
@@ -66,8 +68,9 @@ Apres validation:
 {BUNDLE_COMMAND} lock release --agent <name>
 ```
 
-Les commandes read-only (`context`, `query`, `explain`, `related`, `stats`,
-`doctor`) ne doivent pas etre bloquees par le lock.
+Les commandes SEL read-only de maintenance (`explain`, `related`, `stats`, `doctor`)
+ne doivent pas etre bloquees par le lock. Pour le retrieval agent, ne pas appeler
+`scribe context` ni `scribe query` directement; utiliser `scribe-rag`.
 
 ## Separation Graphify / SCRIBE
 
@@ -206,7 +209,8 @@ Read `{BUNDLE_RELATIVE_PATH}/docs/AGENTS.md` for local rules.
 Read `{SCRIBE_RULE_PATH}` as the host-agent always-on summary; the full protocol remains in `{BUNDLE_RELATIVE_PATH}/docs/scribe.md`.
 
 Critical local rules:
-- Canonical SCRIBE CLI from the project root: `{BUNDLE_COMMAND}`. Use this bundle-local command path in automation.
+- SEL internal engine from the project root: `{BUNDLE_COMMAND}`. Do not call SEL directly for agent retrieval; use it only for bootstrap, doctor, lock, sync/state, export, archive, graph maintenance, and SCRIBE writes.
+- Agent retrieval interface: `.agent/workflow/scribe-rag/scribe-rag` only. Use scribe-rag for `build`, `context`, `query`, `explain`, and `challenge`; it calls SEL internally through the canonical CLI.
 - First command after copying `.agent` into a project: `{BUNDLE_COMMAND} bootstrap`. It is idempotent and initializes only missing project-local surfaces.
 - Do not assume root `./scribe` or root `scripts/` exist; they are opt-in legacy adapters generated only with `{BUNDLE_COMMAND} install --with-root-adapters`.
 - For installation, migration, or several agents working on the same repo, read `{BUNDLE_RELATIVE_PATH}/docs/multi-agent-installation.md` before editing.
@@ -215,13 +219,14 @@ Critical local rules:
 - Use `{BUNDLE_COMMAND} graph --build` and `{BUNDLE_COMMAND} graph --query "..."` for a separate bundle graph under `scribe-out/bundle-graph/`.
 - Default commit/push scope is the host product source. Version `AGENT-MEMOIRE_PROJECT_STATUS.scribe` only when shared causal memory is desired; keep `graphify-out/` and `scribe-out/` out of commits by default; version `.agent/` only when intentionally maintaining agent tooling.
 - Choose the smallest safe tier from `docs/friction-policy.md`; READ_ONLY skips doctor/SCRIBE writes, QUICK skips full ceremony unless risk escalates.
-- Prefer `{BUNDLE_COMMAND} context --mode quick|standard` for compact grounding instead of chaining multiple SCRIBE commands.
-- Use `{BUNDLE_COMMAND} eval` to measure local causal retrieval quality before changing scoring, ranking, or tier policy.
+- Final standard preflight: `.agent/workflow/scribe-rag/scribe-rag build` if the index is stale, `.agent/workflow/scribe-rag/scribe-rag context`, `graphify update .` when app code changed, then `sed -n "1,100p" graphify-out/GRAPH_REPORT.md`. Before significant implementation, run `.agent/workflow/scribe-rag/scribe-rag challenge "<plan>"`; STOP means do not implement, REVIEW means read warnings then decide, and PROCEED means continue.
+- Never use SEL direct retrieval commands in AGENTS.md or agent preflight: no `{BUNDLE_COMMAND} context`, no `{BUNDLE_COMMAND} query`, and no SEL direct challenge for normal agent work.
+- Hybrid activation signal: if `.agent/workflow/scribe-rag/scribe-rag eval --force` drops below 7/8, install `sentence-transformers` and run `.agent/workflow/scribe-rag/scribe-rag build --with-embeddings --force`; after that build, scribe-rag reads the hybrid index automatically. BM25 remains canonical while eval stays >= 7/8.
 - Run `{BUNDLE_COMMAND} sync --agent <name> --type <extension|cli|api|unknown>` before work; if it reports stale state, relire/re-sync before editing.
 - Run `{BUNDLE_COMMAND} clean --dry-run` before delivery when `scribe-out/` has accumulated generated reports, exports, screenshots, or cache noise.
 - Use `{BUNDLE_COMMAND} doctor --suggest-fix` before and after editing `AGENT-MEMOIRE_PROJECT_STATUS.scribe`.
 - Before mutating SCRIBE state, acquire `{BUNDLE_COMMAND} lock acquire --agent <name> --type <extension|cli|api|unknown> --session <JOURNAL-ID>` and release it after validation; doctor and read-only commands stay unblocked.
-- `{BUNDLE_COMMAND} query` searches only causal SCRIBE memory by default; Graphify remains responsible for structural code facts.
+- `.agent/workflow/scribe-rag/scribe-rag query` searches causal SCRIBE memory through the BM25 canonical interface; Graphify remains responsible for structural code facts.
 - `{BUNDLE_COMMAND} graphify-hooks --apply` reapplies and verifies the stdin-consuming Graphify hook patch after any Graphify reinstall or upgrade.
 - Graphify upstream PR diff is preserved in `{BUNDLE_RELATIVE_PATH}/patches/graphify-upstream-hook-stdin.patch` when direct PR tooling is unavailable.
 - `{BUNDLE_COMMAND} worktree` separates generated noise from source changes before delivery.

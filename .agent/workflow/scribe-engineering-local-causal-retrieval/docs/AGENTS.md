@@ -8,7 +8,7 @@ Scope:
 - Do not confuse the two graphs: app work reads `graphify-out/`; SCRIBE tooling work uses `<SCRIBE> graph --build` and `<SCRIBE> graph --query "..."`.
 - SCRIBE/TENOR tooling is excluded by `.graphifyignore` so app god-nodes stay clean.
 - For app work, phrase queries with an app scope, e.g. `graphify query "APP_SCOPE <project-name> auth websocket"`.
-- Canonical SCRIBE CLI from a host project root is `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe`; examples below use `<SCRIBE>` for that path.
+- Canonical SEL engine CLI from a host project root is `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe`; examples below use `<SCRIBE>` for maintenance-only commands. Agent retrieval must go through `.agent/workflow/scribe-rag/scribe-rag`.
 - Host-agent always-on summary lives at `.agent/rules/scribe.md`; the full canonical protocol remains `docs/scribe.md`.
 - Do not assume root `./scribe` or root `scripts/` exist. They are optional legacy adapters generated only with `<SCRIBE> install --with-root-adapters`.
 - For installation, migration, or several agents working on the same repo, read `docs/multi-agent-installation.md` before editing.

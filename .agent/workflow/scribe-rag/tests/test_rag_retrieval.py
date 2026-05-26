@@ -47,6 +47,10 @@ class RagRetrievalTests(unittest.TestCase):
         verdict, _ = challenge("corriger bootstrap projet vide pour BM25 canonique", self.index)
         self.assertNotEqual(verdict, "STOP")
 
+    def test_negative_memory_allows_scriberag_interface_with_sel_engine(self) -> None:
+        verdict, _ = challenge("utiliser scribe-rag comme interface agent et garder SEL comme moteur interne", self.index)
+        self.assertEqual(verdict, "PROCEED")
+
     def test_compact_query_line_budget(self) -> None:
         output = format_results("SCRIBE-RAG QUERY: auth jwt", retrieve("auth jwt", self.index, top_k=5))
         self.assertLessEqual(len(output.splitlines()), 15)

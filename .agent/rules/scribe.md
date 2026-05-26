@@ -9,7 +9,8 @@ protocole complet.
 
 ## Source canonique
 
-- CLI canonique: `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe`
+- SEL moteur interne: `.agent/workflow/scribe-engineering-local-causal-retrieval/scribe`
+- Interface retrieval agent: `.agent/workflow/scribe-rag/scribe-rag`
 - Protocole canonique: `.agent/workflow/scribe-engineering-local-causal-retrieval/docs/scribe.md`
 - Regles locales: `.agent/workflow/scribe-engineering-local-causal-retrieval/docs/AGENTS.md`
 - Installation multi-agent: `.agent/workflow/scribe-engineering-local-causal-retrieval/docs/multi-agent-installation.md`
@@ -25,7 +26,8 @@ Depuis la racine du projet:
 ```bash
 .agent/workflow/scribe-engineering-local-causal-retrieval/scribe bootstrap
 .agent/workflow/scribe-engineering-local-causal-retrieval/scribe sync --agent <name> --type <extension|cli|api|unknown>
-.agent/workflow/scribe-engineering-local-causal-retrieval/scribe context --mode quick
+.agent/workflow/scribe-rag/scribe-rag build
+.agent/workflow/scribe-rag/scribe-rag context
 ```
 
 `bootstrap` est idempotent. Il initialise seulement ce qui manque:
@@ -49,8 +51,9 @@ Apres validation:
 .agent/workflow/scribe-engineering-local-causal-retrieval/scribe lock release --agent <name>
 ```
 
-Les commandes read-only (`context`, `query`, `explain`, `related`, `stats`,
-`doctor`) ne doivent pas etre bloquees par le lock.
+Les commandes SEL read-only de maintenance (`explain`, `related`, `stats`, `doctor`)
+ne doivent pas etre bloquees par le lock. Pour le retrieval agent, ne pas appeler
+`scribe context` ni `scribe query` directement; utiliser `scribe-rag`.
 
 ## Separation Graphify / SCRIBE
 

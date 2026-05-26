@@ -23,6 +23,7 @@ tiers:
     - "GHOST-003"
     - "GHOST-007"
     - "PAT-027"
+    - "GHOST-008"
   warm:
     - "GHOST-001"
     - "VAC-002"
@@ -1329,6 +1330,32 @@ ghosts:
     liens_causaux:
       source: "JOURNAL-076"
       renforce: ["GHOST-006", "PAT-024", "GHOST-003"]
+  - id: "GHOST-008"
+    tier: "hot"
+    status: "ACTIVE"
+    date: "2026-05-26"
+    schema_patch_date: "2026-05-26"
+    titre: "SEL rôle moteur interne uniquement"
+    l0_abstract: "SEL est le moteur de garde et d'écriture; scribe-rag BM25 est la seule interface agent pour retrieval."
+    l2_details: >
+      SEL must stay intact because scribe-rag depends on its canonical CLI for export and because the project still needs SEL for bootstrap, doctor, lock, sync/state, archive, graph maintenance, and SCRIBE writes.
+      The operational boundary is now explicit: agents use scribe-rag for build/context/query/explain/challenge, while SEL remains under the hood for guardrails and stateful memory operations.
+      Hybrid remains an escalation path only when scribe-rag eval drops below 7/8; BM25 remains canonical while eval is green.
+    alternatives_rejetees:
+      - nom: "Archivage complet SEL"
+        raison_rejet: "scribe-rag appelle SEL via CLI. Archiver SEL = casser scribe-rag et perdre doctor/lock/state/export/bootstrap."
+      - nom: "SEL comme interface directe agent"
+        raison_rejet: "Trop verbeux: 34 lignes de query contre 12 pour scribe-rag BM25, et 2/4 retrieval sémantique sur le benchmark."
+    ne_pas_reproposer:
+      - "Appeler SEL directement depuis AGENTS.md"
+      - "Archiver SEL tant que scribe-rag l'utilise"
+    evidence:
+      type: "OBSERVED"
+      source: "JOURNAL-078"
+      observable: "AGENTS.md and the install template now route agent retrieval to scribe-rag while keeping SEL for bootstrap, doctor, lock, sync/state, export, archive, graph maintenance, and writes."
+    liens_causaux:
+      source: "JOURNAL-078"
+      renforce: ["GHOST-006", "GHOST-007", "PAT-027", "GHOST-003"]
 hypotheses: []
 lessons: []
 debts:
@@ -2468,15 +2495,29 @@ journal:
       - "scribe-rag challenge 'corriger bootstrap projet vide pour BM25 canonique' no longer returns STOP from generic negative-memory overlap."
       - "Unit tests cover empty-project Graphify placeholder, app-code Graphify error, approved cookie refresh challenge, and generic empty-project overlap."
     scribe_delta: "PAT-027 | JOURNAL-077 | bootstrap rc policy | challenge false-positive fix"
+  - id: "JOURNAL-078"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    hot_entries_consulted: ["GHOST-007", "GHOST-006", "PAT-027", "GHOST-003", "PAT-024"]
+    l0_abstract: "Clarified SEL as internal engine only and scribe-rag BM25 as the sole agent retrieval interface."
+    pourquoi: >
+      The benchmark made BM25 canonical for agent retrieval, but full SEL archival would break scribe-rag because scribe-rag consumes SEL export and relies on SEL for stateful guardrails. The final boundary keeps SEL intact under the hood and removes direct SEL context/query from agent-facing preflight documentation.
+    validations:
+      - "AGENTS.md now says SEL is an internal engine and scribe-rag is the agent retrieval interface."
+      - "AGENTS.md final preflight uses scribe-rag build/context/challenge and forbids direct SEL context/query for normal agent work."
+      - "Hybrid activation signal is documented: if scribe-rag eval --force drops below 7/8, install sentence-transformers and rebuild with --with-embeddings --force."
+      - "scribe_install_templates.py and .agent/rules/scribe.md were updated so bootstrap/regeneration does not reintroduce SEL direct retrieval."
+      - "scribe-rag challenge for scribe-rag interface plus SEL internal engine returns PROCEED, while direct SEL calls and SEL archival attempts still return STOP."
+    scribe_delta: "GHOST-008 | JOURNAL-078 | AGENTS final interface boundary"
 metrics:
-  sessions_total: 77
+  sessions_total: 78
   scars_total: 3
   vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 35
+    CRITICAL: 36
     STANDARD: 39
     QUICK: 3
   dette_p0_p1_courante: 0
