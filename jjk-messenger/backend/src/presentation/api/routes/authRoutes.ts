@@ -1,23 +1,39 @@
-// CONVENTION_COMMENTAIRES_JACK_JOSIAS_EMOJI_V9_1
-/**
- * 🧬 Fichier de routes pour l'authentification.
- */
-import { Router, RequestHandler } from 'express';
-import { AuthController } from '../controllers/AuthController';
+import { Router } from "express";
+import { type IAuthService } from "../../../application/service/IAuthService";
+import { type RateLimitStore } from "../../../infrastructure/security/RateLimitStore";
+import { type AuthController } from "../controllers/AuthController";
+import { asyncHandler } from "../middlewares/asyncHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { csrfMiddleware } from "../middlewares/csrfMiddleware";
+import { createAuthRateLimiters } from "../middlewares/rateLimitMiddleware";
+import { validate } from "../middlewares/validationMiddleware";
+import { loginSchema, registerSchema } from "../validators/authValidators";
 
-import { loginSchema, registerSchema } from '../validators/authValidators';
-import { asyncHandler } from '../middlewares/asyncHandler';
-import { loginRateLimit, registerRateLimit } from '../middlewares/rateLimitMiddleware';
-import { validate } from '../middlewares/validationMiddleware';
-
-export const createAuthRoutes = (authController: AuthController): Router => {
+export const createAuthRoutes = (
+  authController: AuthController,
+  authService: IAuthService,
+  rateLimitStore: RateLimitStore
+): Router => {
   const router = Router();
+  const rateLimiters = createAuthRateLimiters(rateLimitStore);
 
-  // 🛡️ Route pour l'inscription d'un nouvel utilisateur, avec validation et gestion async
-  router.post('/register', registerRateLimit, validate(registerSchema), asyncHandler(authController.register));
-
-  // 🛡️ Route pour la connexion d'un utilisateur existant, avec validation et gestion async
-  router.post('/login', loginRateLimit, validate(loginSchema), asyncHandler(authController.login));
+  router.post(
+    "/register",
+    rateLimiters.registerIp,
+    rateLimiters.registerIdentity,
+    validate(registerSchema),
+    asyncHandler(authController.register)
+  );
+  router.post(
+    "/login",
+    rateLimiters.loginIp,
+    rateLimiters.loginIdentity,
+    validate(loginSchema),
+    asyncHandler(authController.login)
+  );
+  router.get("/session", authMiddleware(authService), asyncHandler(authController.session));
+  router.post("/refresh", csrfMiddleware, asyncHandler(authController.refresh));
+  router.post("/logout", csrfMiddleware, asyncHandler(authController.logout));
 
   return router;
 };

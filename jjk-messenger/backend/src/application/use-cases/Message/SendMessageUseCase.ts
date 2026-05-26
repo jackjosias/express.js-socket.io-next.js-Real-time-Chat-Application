@@ -3,8 +3,8 @@
  * Respecte les principes de Clean Architecture en dépendant uniquement des interfaces
  */
 import { Message } from '../../../domain/entity/Message';
-import { IMessageRepository } from '../../../domain/repository/IMessageRepository';
-import { IUserRepository } from '../../../domain/repository/IUserRepository';
+import { type IMessageRepository } from '../../../domain/repository/IMessageRepository';
+import { type IUserRepository } from '../../../domain/repository/IUserRepository';
 
 export class SendMessageUseCase {
   constructor(

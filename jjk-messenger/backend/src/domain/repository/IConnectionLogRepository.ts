@@ -3,7 +3,7 @@
  * Définit les contrats que les implémentations concrètes doivent respecter
  */
 
-import { ConnectionLog } from "../../domain/entity/ConnectionLog";
+import { type ConnectionLog } from "../../domain/entity/ConnectionLog";
 
 export interface IConnectionLogRepository {
   findById(id: string): Promise<ConnectionLog | null>;

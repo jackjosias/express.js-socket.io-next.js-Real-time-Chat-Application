@@ -10,17 +10,16 @@
  * @intention (CRIDE/AHIDS v1.0) Centraliser et découpler la logique de gestion d'erreur asynchrone.
  * @see Leçon de Sagesse #114 (BSAGF v9.1) sur l'adaptation du code au système de types.
  */
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { type Request, type Response, type NextFunction, type RequestHandler } from 'express';
 
-// Définit un type pour nos contrôleurs async. Nous utilisons 'any' car la promesse peut résolvez après que la réponse a été envoyée.
-type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;
+type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<void> | void;
 
 export const asyncHandler = (fn: AsyncRequestHandler): RequestHandler => {
   // La fonction retournée est un RequestHandler asynchrone.
   // Elle exécute la fonction async et gère la promesse avec try/catch.
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await fn(req, res, next);
+      await Promise.resolve(fn(req, res, next));
     } catch (error) {
       next(error);
     }

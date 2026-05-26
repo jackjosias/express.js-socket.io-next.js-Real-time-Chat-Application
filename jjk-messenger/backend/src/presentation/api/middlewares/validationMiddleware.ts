@@ -10,27 +10,22 @@
  * @intention (CRIDE/AHIDS v1.0) Centraliser et découpler la logique de validation, renforçant le SRP.
  * @see Leçon de Sagesse #44 (BSAGF v9.1) sur la validation systématique des données entrantes.
  */
-import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { type Request, type Response, type NextFunction } from 'express';
+import { type AnyZodObject } from 'zod';
 
 export const validate = (schema: AnyZodObject) =>
   (req: Request, res: Response, next: NextFunction) => { // Make this middleware synchronous
-    schema.parseAsync({ // Execute async operation
-      body: req.body,
-      query: req.query,
-      params: req.params,
-    })
+    const payload = {
+      body: req.body as unknown,
+      query: req.query as unknown,
+      params: req.params as unknown,
+    };
+
+    schema.parseAsync(payload)
     .then(() => {
       next(); // Call next on success
     })
-    .catch((error) => {
-      if (error instanceof ZodError) {
-        // Pass ZodError to the global error handler
-        // The errorMiddleware should handle the 400 response formatting
-        next(error);
-      } else {
-        // Pass other errors to the global error handler
-        next(error);
-      }
+    .catch((error: unknown) => {
+      next(error);
     });
   };

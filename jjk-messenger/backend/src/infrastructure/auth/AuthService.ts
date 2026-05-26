@@ -1,18 +1,16 @@
-/**
- * Implémentation concrète du service d'authentification
- * Utilise bcrypt pour le hachage des mots de passe et jsonwebtoken pour les JWT
- */
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { IAuthService } from '../../application/service/IAuthService';
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import { ACCESS_TOKEN_TTL_SECONDS } from "../security/authConstants";
+import { type IAuthService } from "../../application/service/IAuthService";
 
 export class AuthService implements IAuthService {
   private readonly JWT_SECRET: string;
-  private readonly SALT_ROUNDS: number = 10;
+  private readonly SALT_ROUNDS = 10;
 
   constructor(jwtSecret: string) {
     if (!jwtSecret) {
-      throw new Error('JWT_SECRET est requis pour initialiser AuthService');
+      throw new Error("JWT_SECRET est requis pour initialiser AuthService");
     }
     this.JWT_SECRET = jwtSecret;
   }
@@ -29,7 +27,7 @@ export class AuthService implements IAuthService {
     return jwt.sign(
       { userId, username },
       this.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: ACCESS_TOKEN_TTL_SECONDS }
     );
   }
 
@@ -37,8 +35,20 @@ export class AuthService implements IAuthService {
     try {
       const decoded = jwt.verify(token, this.JWT_SECRET) as { userId: string; username: string };
       return decoded;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
+  }
+
+  generateRefreshToken(): string {
+    return crypto.randomBytes(64).toString("base64url");
+  }
+
+  generateCsrfToken(): string {
+    return crypto.randomBytes(32).toString("base64url");
+  }
+
+  hashToken(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
   }
 }

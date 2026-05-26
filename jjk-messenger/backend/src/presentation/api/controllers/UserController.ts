@@ -3,8 +3,8 @@
  * Contrôleur des utilisateurs
  * Gère les routes liées aux utilisateurs
  */
-import { Request, Response } from 'express';
-import { GetUserListUseCase } from '../../../application/use-cases/User/GetUserListUseCase';
+import { type Request, type Response } from 'express';
+import { type GetUserListUseCase } from '../../../application/use-cases/User/GetUserListUseCase';
 
 export class UserController {
     constructor(private getUserListUseCase: GetUserListUseCase) {}

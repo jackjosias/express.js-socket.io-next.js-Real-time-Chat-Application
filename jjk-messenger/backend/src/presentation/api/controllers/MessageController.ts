@@ -2,8 +2,8 @@
  * Contrôleur des messages
  * Gère les routes liées aux messages
  */
-import { Request, Response } from 'express';
-import { GetMessageHistoryUseCase } from '../../../application/use-cases/Message/GetMessageHistoryUseCase';
+import { type Request, type Response } from 'express';
+import { type GetMessageHistoryUseCase } from '../../../application/use-cases/Message/GetMessageHistoryUseCase';
 
 export class MessageController {
   constructor(private getMessageHistoryUseCase: GetMessageHistoryUseCase) {}

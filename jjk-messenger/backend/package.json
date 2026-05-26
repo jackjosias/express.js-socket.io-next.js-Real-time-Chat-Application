@@ -2,10 +2,21 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.20.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "DEBUG=app:* nodemon --exec ts-node index.ts",
+    "dev": "DEBUG=app:* nodemon --exec \"ts-node --files\" index.ts",
     "build": "tsc",
+    "lint": "npm run lint:types && npm run lint:eslint",
+    "lint:types": "tsc --project tsconfig.lint.json --noEmit --pretty false && tsc --project scripts/tsconfig.json --noEmit --pretty false",
+    "lint:eslint": "eslint --no-cache --max-warnings=0 index.ts \"src/**/*.ts\" \"scripts/**/*.ts\"",
+    "lint:eslint:full": "eslint --no-cache --max-warnings=0 --format json --stats index.ts \"src/**/*.ts\" \"scripts/**/*.ts\"",
+    "lint:full": "npm run lint:types && npm run lint:eslint:full",
+    "test:e2e-smoke": "ts-node scripts/e2e-smoke.ts",
+    "test:refresh-rotation": "ts-node scripts/verify-refresh-rotation.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
@@ -42,8 +53,12 @@
     "@types/node": "^22.15.23",
     "debug": "^4.3.5",
     "dotenv": "^16.5.0",
+    "eslint": "^9.39.4",
+    "globals": "^16.5.0",
     "nodemon": "^3.1.10",
+    "socket.io-client": "^4.8.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.59.4"
   }
 }

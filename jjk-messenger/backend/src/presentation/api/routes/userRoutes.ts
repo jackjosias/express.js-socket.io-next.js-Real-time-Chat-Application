@@ -3,8 +3,8 @@
  * 🧬 Fichier de routes pour les utilisateurs.
  */
 import { Router } from 'express';
-import { UserController } from '../controllers/UserController';
-import { IAuthService } from '../../../application/service/IAuthService';
+import { type UserController } from '../controllers/UserController';
+import { type IAuthService } from '../../../application/service/IAuthService';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { asyncHandler } from '../middlewares/asyncHandler';
 

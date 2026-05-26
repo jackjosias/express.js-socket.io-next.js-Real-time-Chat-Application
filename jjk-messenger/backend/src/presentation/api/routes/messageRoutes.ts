@@ -2,9 +2,9 @@
 /**
  * 🧬 Fichier de routes pour les messages.
  */
-import { Router, RequestHandler } from 'express';
-import { MessageController } from '../controllers/MessageController';
-import { IAuthService } from '../../../application/service/IAuthService';
+import { Router } from 'express';
+import { type MessageController } from '../controllers/MessageController';
+import { type IAuthService } from '../../../application/service/IAuthService';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 import { getMessagesSchema } from '../validators/messageValidators';
@@ -15,7 +15,7 @@ export const createMessageRoutes = (messageController: MessageController, authSe
   const router = Router();
 
   // 🛡️ Route pour récupérer l'historique des messages avec un utilisateur (protégée, validée et avec gestion async)
-  router.get('/:userId', authMiddleware(authService), validate(getMessagesSchema), asyncHandler(messageController.getMessages) as RequestHandler);
+  router.get('/:userId', authMiddleware(authService), validate(getMessagesSchema), asyncHandler(messageController.getMessages));
 
   return router;
 };

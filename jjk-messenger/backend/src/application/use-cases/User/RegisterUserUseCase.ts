@@ -3,8 +3,8 @@
  * Respecte les principes de Clean Architecture en dépendant uniquement des interfaces
  */
 import { User } from '../../../domain/entity/User';
-import { IUserRepository } from '../../../domain/repository/IUserRepository';
-import { IAuthService } from '../../service/IAuthService';
+import { type IUserRepository } from '../../../domain/repository/IUserRepository';
+import { type IAuthService } from '../../service/IAuthService';
 
 export class RegisterUserUseCase {
   constructor(

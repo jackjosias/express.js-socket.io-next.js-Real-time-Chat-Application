@@ -23,6 +23,7 @@ model User {
   sentMessages     Message[]       @relation("SentMessages")
   receivedMessages Message[]       @relation("ReceivedMessages")
   connectionLogs   ConnectionLog[]
+  refreshTokens    RefreshToken[]
 
   // Index pour optimiser les recherches
   @@index([username])
@@ -60,4 +61,39 @@ model ConnectionLog {
   // Index pour optimiser les recherches
   @@index([userId])
   @@index([connectedAt])
+}
+
+
+model RefreshToken {
+  id                String    @id @default(cuid())
+  tokenHash         String    @unique
+  csrfTokenHash     String
+  familyId          String
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  revokedReason     String?
+  replacedByTokenId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  scope     String
+  key       String
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, key])
+  @@index([resetAt])
 }

@@ -23,8 +23,13 @@ export class User {
 
     // Méthode pour créer une représentation publique de l'utilisateur (sans mot de passe et méthodes)
     toPublic(): PublicUser {
-      // Destructuration pour omettre le mot de passe et les méthodes lors de la création de l'objet public
-      const { password, updateStatus, toPublic: toPublicMethod, ...publicUser } = this;
-      return publicUser;
+      return {
+        id: this.id,
+        username: this.username,
+        createdAt: this.createdAt,
+        updatedAt: this.updatedAt,
+        lastSeenAt: this.lastSeenAt,
+        isOnline: this.isOnline,
+      };
     }
   }

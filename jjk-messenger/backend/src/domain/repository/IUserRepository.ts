@@ -3,7 +3,7 @@
  * Définit les contrats que les implémentations concrètes doivent respecter
  */
 
-import { User } from "../../domain/entity/User";
+import { type User } from "../../domain/entity/User";
 
 export interface IUserRepository {
   findById(id: string): Promise<User | null>;

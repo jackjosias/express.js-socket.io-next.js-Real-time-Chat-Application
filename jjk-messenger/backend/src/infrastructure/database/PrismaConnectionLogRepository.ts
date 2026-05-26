@@ -3,9 +3,9 @@
  * Implémentation du repository ConnectionLog avec Prisma
  * Respecte l'interface IConnectionLogRepository définie dans la couche application
  */
-import { PrismaClient, Prisma } from '@prisma/client';
+import { type PrismaClient, type Prisma } from '@prisma/client';
 import { ConnectionLog } from '../../domain/entity/ConnectionLog';
-import { IConnectionLogRepository } from '../../domain/repository/IConnectionLogRepository';
+import { type IConnectionLogRepository } from '../../domain/repository/IConnectionLogRepository';
 
 // 🧬 Type pour le client Prisma transactionnel
 type PrismaTransactionalClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;

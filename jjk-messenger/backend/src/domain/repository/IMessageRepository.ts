@@ -3,7 +3,7 @@
  * Définit les contrats que les implémentations concrètes doivent respecter
  */
 
-import { Message } from "../entity/Message";
+import { type Message } from "../entity/Message";
 
 
 

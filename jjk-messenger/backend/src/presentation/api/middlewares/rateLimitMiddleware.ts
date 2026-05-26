@@ -1,84 +1,105 @@
-import { Request, RequestHandler, Response } from 'express';
-
-type RateLimitEntry = {
-  count: number;
-  resetAt: number;
-};
+import { type Request, type RequestHandler, type Response } from "express";
+import { type RateLimitStore } from "../../../infrastructure/security/RateLimitStore";
+import { runtimeMetrics } from "../../../infrastructure/observability/runtimeMetrics";
 
 type RateLimitOptions = {
+  scope: string;
   windowMs: number;
   maxRequests: number;
   message: string;
+  keyResolver: (req: Request) => string;
+  store: RateLimitStore;
 };
 
-const AUTH_RATE_LIMIT_MESSAGE = 'Trop de tentatives. Réessayez plus tard.';
+const AUTH_RATE_LIMIT_MESSAGE = "Trop de tentatives. Reessayez plus tard.";
+const UNKNOWN_CLIENT_KEY = "unknown";
 
-const getClientKey = (req: Request): string => {
-  return req.ip || req.socket.remoteAddress || 'unknown';
-};
+function getClientIp(req: Request): string {
+  return req.ip || req.socket.remoteAddress || UNKNOWN_CLIENT_KEY;
+}
 
-const createEntry = (now: number, windowMs: number): RateLimitEntry => ({
-  count: 0,
-  resetAt: now + windowMs,
-});
+function getBodyUsername(req: Request): string {
+  const body = req.body as { username?: unknown } | undefined;
+  return typeof body?.username === "string" ? body.username.trim().toLowerCase() : "anonymous";
+}
 
-const cleanupExpiredEntries = (entries: Map<string, RateLimitEntry>, now: number): void => {
-  for (const [key, entry] of entries.entries()) {
-    if (entry.resetAt <= now) {
-      entries.delete(key);
+function normalizeRateLimitKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9:._-]/g, "_").slice(0, 256) || UNKNOWN_CLIENT_KEY;
+}
+
+function setRateLimitHeaders(res: Response, limit: number, remaining: number, resetAt: Date): void {
+  res.setHeader("X-RateLimit-Limit", String(limit));
+  res.setHeader("X-RateLimit-Remaining", String(remaining));
+  res.setHeader("X-RateLimit-Reset", String(Math.ceil(resetAt.getTime() / 1000)));
+}
+
+export function createRateLimitMiddleware(options: RateLimitOptions): RequestHandler {
+  return async (req, res, next): Promise<void> => {
+    try {
+      const decision = await options.store.consume({
+        scope: options.scope,
+        key: normalizeRateLimitKey(options.keyResolver(req)),
+        maxRequests: options.maxRequests,
+        windowMs: options.windowMs,
+      });
+
+      setRateLimitHeaders(res, decision.limit, decision.remaining, decision.resetAt);
+      runtimeMetrics.recordRateLimitDecision(options.scope, decision.allowed);
+
+      if (!decision.allowed) {
+        res.setHeader("Retry-After", String(decision.retryAfterSeconds));
+        res.status(429).json({ message: options.message });
+        return;
+      }
+
+      next();
+    } catch (error) {
+      next(error);
     }
-  }
-};
-
-const setRateLimitHeaders = (
-  res: Response,
-  maxRequests: number,
-  remaining: number,
-  resetAt: number
-): void => {
-  res.setHeader('X-RateLimit-Limit', String(maxRequests));
-  res.setHeader('X-RateLimit-Remaining', String(remaining));
-  res.setHeader('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
-};
-
-export const createRateLimitMiddleware = (options: RateLimitOptions): RequestHandler => {
-  const attempts = new Map<string, RateLimitEntry>();
-
-  return (req, res, next): void => {
-    const now = Date.now();
-    cleanupExpiredEntries(attempts, now);
-
-    const key = getClientKey(req);
-    const currentEntry = attempts.get(key);
-    const entry = currentEntry && currentEntry.resetAt > now
-      ? currentEntry
-      : createEntry(now, options.windowMs);
-
-    entry.count += 1;
-    attempts.set(key, entry);
-
-    const remaining = Math.max(options.maxRequests - entry.count, 0);
-    setRateLimitHeaders(res, options.maxRequests, remaining, entry.resetAt);
-
-    if (entry.count > options.maxRequests) {
-      const retryAfterSeconds = Math.ceil((entry.resetAt - now) / 1000);
-      res.setHeader('Retry-After', String(retryAfterSeconds));
-      res.status(429).json({ message: options.message });
-      return;
-    }
-
-    next();
   };
-};
+}
 
-export const registerRateLimit = createRateLimitMiddleware({
-  windowMs: 60 * 60 * 1000,
-  maxRequests: 5,
-  message: AUTH_RATE_LIMIT_MESSAGE,
-});
+export function createAuthRateLimiters(store: RateLimitStore): {
+  registerIp: RequestHandler;
+  registerIdentity: RequestHandler;
+  loginIp: RequestHandler;
+  loginIdentity: RequestHandler;
+} {
+  const ipKey = (req: Request): string => getClientIp(req);
+  const identityKey = (req: Request): string => `${getClientIp(req)}:${getBodyUsername(req)}`;
 
-export const loginRateLimit = createRateLimitMiddleware({
-  windowMs: 15 * 60 * 1000,
-  maxRequests: 10,
-  message: AUTH_RATE_LIMIT_MESSAGE,
-});
+  return {
+    registerIp: createRateLimitMiddleware({
+      store,
+      scope: "auth:register:ip",
+      windowMs: 60 * 60 * 1000,
+      maxRequests: 5,
+      message: AUTH_RATE_LIMIT_MESSAGE,
+      keyResolver: ipKey,
+    }),
+    registerIdentity: createRateLimitMiddleware({
+      store,
+      scope: "auth:register:identity",
+      windowMs: 60 * 60 * 1000,
+      maxRequests: 3,
+      message: AUTH_RATE_LIMIT_MESSAGE,
+      keyResolver: identityKey,
+    }),
+    loginIp: createRateLimitMiddleware({
+      store,
+      scope: "auth:login:ip",
+      windowMs: 15 * 60 * 1000,
+      maxRequests: 10,
+      message: AUTH_RATE_LIMIT_MESSAGE,
+      keyResolver: ipKey,
+    }),
+    loginIdentity: createRateLimitMiddleware({
+      store,
+      scope: "auth:login:identity",
+      windowMs: 15 * 60 * 1000,
+      maxRequests: 5,
+      message: AUTH_RATE_LIMIT_MESSAGE,
+      keyResolver: identityKey,
+    }),
+  };
+}

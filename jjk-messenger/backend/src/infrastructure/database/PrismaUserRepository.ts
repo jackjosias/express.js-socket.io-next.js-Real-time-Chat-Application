@@ -3,9 +3,9 @@
  * Implémentation du repository User avec Prisma
  * Respecte l'interface IUserRepository définie dans la couche application
  */
-import { PrismaClient, Prisma } from '@prisma/client';
+import { type PrismaClient, type Prisma } from '@prisma/client';
 import { User } from '../../domain/entity/User';
-import { IUserRepository } from '../../domain/repository/IUserRepository';
+import { type IUserRepository } from '../../domain/repository/IUserRepository';
 
 // 🧬 Type pour le client Prisma transactionnel
 type PrismaTransactionalClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;

@@ -2,9 +2,9 @@
  * Implémentation du repository Message avec Prisma
  * Respecte l'interface IMessageRepository définie dans la couche application
  */
-import { PrismaClient } from '@prisma/client';
+import { type PrismaClient } from '@prisma/client';
 import { Message } from '../../domain/entity/Message';
-import { IMessageRepository } from '../../domain/repository/IMessageRepository';
+import { type IMessageRepository } from '../../domain/repository/IMessageRepository';
 
 export class PrismaMessageRepository implements IMessageRepository {
   constructor(private prisma: PrismaClient) {}

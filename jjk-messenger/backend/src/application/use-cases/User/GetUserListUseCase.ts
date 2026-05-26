@@ -3,8 +3,8 @@
  * Respecte les principes de Clean Architecture en dépendant uniquement des interfaces
  */
 
-import { PublicUser } from "../../../domain/entity/User";
-import { IUserRepository } from "../../../domain/repository/IUserRepository";
+import { type PublicUser } from "../../../domain/entity/User";
+import { type IUserRepository } from "../../../domain/repository/IUserRepository";
 
 export class GetUserListUseCase {
   constructor(

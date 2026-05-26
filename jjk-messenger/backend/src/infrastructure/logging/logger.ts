@@ -1,21 +1,37 @@
-// --- Fichier Modifié: backend/src/infrastructure/logging/logger.ts ---
-import debug from 'debug';
+import debug from "debug";
 
-/**
- * 🧬 Logger structuré centralisé (Debug)
- * @author Jack-Josias_v9.1
- * @date 2025
- * @description Crée et exporte des instances du logger 'debug' pour différents niveaux.
- *              Le contrôle de l'affichage se fait via la variable d'environnement DEBUG.
- *              Ex: DEBUG=app:info,app:error
- */
 const logger = {
-  info: debug('app:info'),
-  warn: debug('app:warn'),
-  error: debug('app:error'),
+  info: debug("app:info"),
+  warn: debug("app:warn"),
+  error: debug("app:error"),
 };
 
-// Par défaut, les logs d'info affichent sur stdout, les autres sur stderr.
-logger.info.log = console.log.bind(console);
+function formatLogValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Error) {
+    return JSON.stringify({ message: value.message, stack: value.stack });
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+logger.info.log = (...args: unknown[]): void => {
+  process.stdout.write(`${args.map(formatLogValue).join(" ")}\n`);
+};
+
+logger.warn.log = (...args: unknown[]): void => {
+  process.stderr.write(`${args.map(formatLogValue).join(" ")}\n`);
+};
+
+logger.error.log = (...args: unknown[]): void => {
+  process.stderr.write(`${args.map(formatLogValue).join(" ")}\n`);
+};
 
 export default logger;

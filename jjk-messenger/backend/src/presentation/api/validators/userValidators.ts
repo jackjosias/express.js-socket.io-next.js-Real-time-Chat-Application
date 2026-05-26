@@ -7,10 +7,4 @@
  *              Cette structure sera utilisée par les contrôleurs pour valider les entrées.
  * @see Leçon de Sagesse #44 (BSAGF v9.1) sur la validation systématique des données entrantes.
  */
-import { z } from 'zod';
-
-// 📝 Exemple de schéma de validation qui pourrait être utilisé à l'avenir.
-// export const updateUserProfileSchema = z.object({
-//   email: z.string().email().optional(),
-//   bio: z.string().max(200).optional(),
-// });
+export {};

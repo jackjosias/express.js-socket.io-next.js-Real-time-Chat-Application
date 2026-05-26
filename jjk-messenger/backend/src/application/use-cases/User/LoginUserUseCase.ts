@@ -1,63 +1,83 @@
-// --- Fichier Modifié: backend/src/application/use-cases/LoginUserUseCase.ts ---
-/**
- * Cas d'utilisation: Connexion d'un utilisateur
- * Respecte les principes de Clean Architecture en dépendant uniquement des interfaces
- */
-import { PrismaClient } from '@prisma/client';
-import { IUserRepository } from '../../../domain/repository/IUserRepository';
-import { IAuthService } from '../../service/IAuthService';
-import { IConnectionLogRepository } from '../../../domain/repository/IConnectionLogRepository';
-import { ConnectionLog } from '../../../domain/entity/ConnectionLog';
+import crypto from "crypto";
+import { type Prisma, type PrismaClient } from "@prisma/client";
+import { RefreshToken } from "../../../domain/entity/RefreshToken";
+import { type IConnectionLogRepository } from "../../../domain/repository/IConnectionLogRepository";
+import { type IRefreshTokenRepository } from "../../../domain/repository/IRefreshTokenRepository";
+import { type IUserRepository } from "../../../domain/repository/IUserRepository";
+import { REFRESH_TOKEN_TTL_MS } from "../../../infrastructure/security/authConstants";
+import { ConnectionLog } from "../../../domain/entity/ConnectionLog";
+import { type IAuthService } from "../../service/IAuthService";
+import { type AuthSessionTokens } from "../Auth/AuthSessionTypes";
+
+type TransactionalUserRepository = IUserRepository & {
+  withTx(tx: Prisma.TransactionClient): IUserRepository;
+};
+
+type TransactionalConnectionLogRepository = IConnectionLogRepository & {
+  withTx(tx: Prisma.TransactionClient): IConnectionLogRepository;
+};
+
+type TransactionalRefreshTokenRepository = IRefreshTokenRepository & {
+  withTx(tx: Prisma.TransactionClient): IRefreshTokenRepository;
+};
+
+const createInvalidCredentialsError = (): Error & { statusCode?: number } => {
+  const error = new Error("Identifiants invalides") as Error & { statusCode?: number };
+  error.statusCode = 401;
+  return error;
+};
 
 export class LoginUserUseCase {
   constructor(
     private userRepository: IUserRepository,
     private authService: IAuthService,
     private connectionLogRepository: IConnectionLogRepository,
-    // 🧬 Injection de l'instance Prisma pour orchestrer la transaction
+    private refreshTokenRepository: IRefreshTokenRepository,
     private prisma: PrismaClient
   ) {}
 
-  async execute(
-    username: string,
-    password: string
-  ): Promise<{ token: string; userId: string }> {
-    // Vérifier si l'utilisateur existe
+  async execute(username: string, password: string): Promise<AuthSessionTokens> {
     const user = await this.userRepository.findByUsername(username);
     if (!user) {
-      throw new Error('Identifiants invalides');
+      throw createInvalidCredentialsError();
     }
 
-    // Vérifier le mot de passe
     const isPasswordValid = await this.authService.comparePassword(
       password,
       user.password
     );
     if (!isPasswordValid) {
-      throw new Error('Identifiants invalides');
+      throw createInvalidCredentialsError();
     }
 
-    // 🛡️ Utilisation d'une transaction pour garantir l'atomicité, orchestrée par le Use Case
-    //    mais exécutée par les repositories via l'injection du client transactionnel.
-    // @suture (MSD/MIMI v1.2) L'injection de dépendance est maintenant pure, le Use Case ne dépend plus de `prisma.$transaction`.
-    // @intention (CRIDE/AHIDS v1.0) Rétablir la séparation des responsabilités : le Use Case orchestre, l'infrastructure exécute.
-    await this.prisma.$transaction(async (tx) => {
-      // @ts-ignore - Nécessaire car withTx n'est pas sur l'interface IUserRepository
-      const userRepoTx = this.userRepository.withTx(tx);
-      // @ts-ignore - Nécessaire car withTx n'est pas sur l'interface IConnectionLogRepository
-      const connectionLogRepoTx = this.connectionLogRepository.withTx(tx);
+    const refreshToken = this.authService.generateRefreshToken();
+    const csrfToken = this.authService.generateCsrfToken();
+    const refreshRecord = new RefreshToken(
+      "",
+      this.authService.hashToken(refreshToken),
+      this.authService.hashToken(csrfToken),
+      crypto.randomUUID(),
+      user.id,
+      new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
+    );
 
-      // Mettre à jour le statut de l'utilisateur
+    await this.prisma.$transaction(async (tx) => {
+      const userRepoTx = (this.userRepository as TransactionalUserRepository).withTx(tx);
+      const connectionLogRepoTx = (this.connectionLogRepository as TransactionalConnectionLogRepository).withTx(tx);
+      const refreshTokenRepoTx = (this.refreshTokenRepository as TransactionalRefreshTokenRepository).withTx(tx);
+
       await userRepoTx.updateOnlineStatus(user.id, true);
       await userRepoTx.updateLastSeen(user.id, new Date());
-
-      // Créer un journal de connexion
-      const connectionLog = new ConnectionLog('', user.id, new Date(), null);
-      await connectionLogRepoTx.create(connectionLog);
+      await connectionLogRepoTx.create(new ConnectionLog("", user.id, new Date(), null));
+      await refreshTokenRepoTx.create(refreshRecord);
     });
 
-    // Générer un token JWT
-    const token = this.authService.generateToken(user.id, user.username);
-    return { token, userId: user.id };
+    return {
+      accessToken: this.authService.generateToken(user.id, user.username),
+      refreshToken,
+      csrfToken,
+      userId: user.id,
+      username: user.username,
+    };
   }
 }
