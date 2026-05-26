@@ -17,5 +17,5 @@ Layout:
 - `sel/`: internal SCRIBE engineering local causal retrieval engine.
 - `rag/`: BM25 retrieval layer that calls the local SEL engine.
 
-The old sibling paths are compatibility shims only. New projects should copy this
-directory as one unit and use the root commands above.
+No legacy sibling workflow directory is part of the portable bundle. New projects
+should copy this directory as one unit and use the root commands above.

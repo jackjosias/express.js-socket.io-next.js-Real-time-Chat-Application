@@ -1450,27 +1450,27 @@ ghosts:
     titre: "Bundle SCRIBE portable mono-dossier"
     l0_abstract: "Le workflow portable canonique est `.agent/workflow/scribe/`; copier ce seul dossier suffit pour bootstrapper SEL et scribe-rag dans un nouveau projet."
     l2_details: >
-      La portabilité réelle exigeait une identité de bundle unique, pas deux dossiers voisins à déplacer ensemble.
-      Le nouveau root `.agent/workflow/scribe/` contient `sel/`, `rag/`, les wrappers racine `scribe` et `scribe-rag`, plus des shims de compatibilité sur les anciens chemins.
-      Les résolveurs RAG cherchent désormais le root portable par structure `.agent/workflow/scribe`, SEL bootstrap installe ce root entier dans les projets hôtes, et les templates AGENTS/rules/CI pointent vers les commandes racine.
-      Les anciens chemins restent uniquement des shims pour éviter de casser les agents historiques; ils ne sont plus la source canonique.
+      La portabilité réelle exige une identité de bundle unique, pas deux dossiers voisins à déplacer ensemble.
+      Le root `.agent/workflow/scribe/` contient `sel/`, `rag/`, les wrappers racine `scribe` et `scribe-rag`, sans aucun dossier workflow sibling hérité visible.
+      Les résolveurs RAG cherchent le root portable par structure `.agent/workflow/scribe`, SEL bootstrap installe ce root entier dans les projets hôtes, et les templates AGENTS/rules/CI pointent vers les commandes racine.
+      Les anciens chemins ne sont plus fournis; les prompts, scripts ou agents qui les utilisent doivent être corrigés vers `.agent/workflow/scribe/` au lieu de maintenir des shims.
     alternatives_rejetees:
       - nom: "Copier SEL et scribe-rag comme deux dossiers séparés"
         raison_rejet: "Trop fragile pour les nouveaux projets: un agent peut oublier un dossier, casser la résolution SEL/RAG ou dériver les templates."
-      - nom: "Renommer sans shims historiques"
-        raison_rejet: "Casserait les scripts, prompts et agents déjà configurés sur les chemins précédents."
+      - nom: "Garder les anciens dossiers comme shims visibles"
+        raison_rejet: "Fonctionnellement compatible mais contradictoire avec la promesse mono-dossier: cela crée deux points d'entrée apparents et entretient la dette de chemins."
       - nom: "Laisser les templates pointer les anciens chemins"
         raison_rejet: "Bootstrap réintroduirait l'ancienne topologie et annulerait la portabilité mono-dossier."
     ne_pas_reproposer:
       - "Copier séparément `.agent/workflow/scribe-engineering-local-causal-retrieval/` et `.agent/workflow/scribe-rag/`"
       - "Faire de `.agent/workflow/scribe-rag/` une source canonique séparée"
-      - "Supprimer les shims historiques avant que tous les agents aient migré"
+      - "Recréer des dossiers de shims visibles pour les anciens chemins"
     evidence:
       type: "OBSERVED"
-      source: "JOURNAL-081"
-      observable: "Copie unique de `.agent/workflow/scribe/` dans /tmp, bootstrap rc=0, Graphify placeholder, scribe-rag build/context, doctor et whoami OK sans anciens dossiers."
+      source: "JOURNAL-082"
+      observable: "Les anciens dossiers `.agent/workflow/scribe-engineering-local-causal-retrieval/` et `.agent/workflow/scribe-rag/` ont été supprimés; la copie portable de `.agent/workflow/scribe/` bootstrappe et exécute RAG/doctor/whoami seule."
     liens_causaux:
-      source: "JOURNAL-081"
+      source: "JOURNAL-082"
       renforce: ["GHOST-007", "GHOST-008", "GHOST-009", "VAC-006", "PAT-024"]
 hypotheses: []
 lessons: []
@@ -2690,15 +2690,41 @@ journal:
       surfaces_touched: ["scribe"]
       collisions_detected: 0
       stale_syncs: 0
+  - id: "JOURNAL-082"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    agent_type: "cli"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-007", "GHOST-008", "GHOST-009", "GHOST-011", "PAT-024"]
+    l0_abstract: "Removed visible legacy SCRIBE workflow shim directories."
+    pourquoi: >
+      The previous compatibility layer was functionally safe but violated the strict user requirement: one portable workflow folder only.
+      Keeping old sibling directories visible made the system look duplicated and allowed stale prompts to survive instead of being corrected.
+      The canonical contract is now fail-fast: `.agent/workflow/scribe/` is the only portable SCRIBE workflow root, and old path callers must be migrated.
+    validations:
+      - "Legacy workflow directories absent: `.agent/workflow/scribe-engineering-local-causal-retrieval/` and `.agent/workflow/scribe-rag/` do not exist."
+      - "Active docs/scripts scan: no live reference to old workflow paths in `AGENTS.md` or `.agent` outside historical tests/archive."
+      - "Portable copy test: copied only `.agent/workflow/scribe/` into `/tmp`, bootstrap rc=0, RAG build/context, doctor and whoami passed without old sibling folders."
+      - "SEL tests: `python3 -m unittest discover -s .agent/workflow/scribe/sel/tests` passed 61 tests."
+      - "RAG tests: `python3 -m unittest discover -s .agent/workflow/scribe/rag/tests` passed 14 tests."
+      - "scribe-rag eval: `.agent/workflow/scribe/scribe-rag eval --force` returned 8/8."
+      - "doctor: `.agent/workflow/scribe/scribe doctor --suggest-fix` returned 0 errors."
+    scribe_delta: "GHOST-011 updated | JOURNAL-082 | legacy shim directories removed"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
 metrics:
-  sessions_total: 81
+  sessions_total: 82
   scars_total: 3
   vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 39
+    CRITICAL: 40
     STANDARD: 39
     QUICK: 3
   dette_p0_p1_courante: 0
