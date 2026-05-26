@@ -9,16 +9,16 @@ protocole complet.
 
 ## Source canonique
 
-- Bundle portable: `.agent/workflow/scribe/`
-- SEL moteur interne: `.agent/workflow/scribe/scribe`
-- Interface retrieval agent: `.agent/workflow/scribe/scribe-rag`
-- Protocole canonique: `.agent/workflow/scribe/sel/docs/scribe.md`
+- Racine portable unique: `.agent/workflow/scribe/`
+- CLI maintenance interne: `.agent/workflow/scribe/scribe`
+- CLI lecture agent: `.agent/workflow/scribe/scribe-rag`
+- Protocole complet: `.agent/workflow/scribe/sel/docs/scribe.md`
 - Regles locales: `.agent/workflow/scribe/sel/docs/AGENTS.md`
 - Installation multi-agent: `.agent/workflow/scribe/sel/docs/multi-agent-installation.md`
 
-Ne jamais utiliser `.agent/workflows/scribe.md` ni
-`docs/archive/scribe.v3.1.md.old` comme source active. Ce sont des chemins
-historiques ou archives.
+Tout chemin SCRIBE hors de `.agent/workflow/scribe/` est non canonique. Ne pas
+creer de dossier de compatibilite visible; corriger les anciens appels vers les
+commandes ci-dessus.
 
 ## Reflexe de demarrage
 
@@ -33,7 +33,19 @@ Depuis la racine du projet:
 
 `bootstrap` est idempotent. Il initialise seulement ce qui manque:
 `AGENT-MEMOIRE_PROJECT_STATUS.scribe`, `scribe-out/`, `state.json`,
-`.graphifyignore` et le bloc gere de `AGENTS.md`.
+`.graphifyignore` et le bloc gere de `AGENTS.md`. Il ne lance aucun daemon.
+
+## Dashboard SCRIBE
+
+```bash
+.agent/workflow/scribe/scribe dashboard
+.agent/workflow/scribe/scribe dashboard --serve --host 127.0.0.1 --port 8765
+```
+
+`dashboard` genere un HTML statique dans `scribe-out/`. `dashboard --serve`
+lance a la demande un serveur HTTP local leger (`ThreadingHTTPServer`) pour vue
+live/reload; ce processus s'arrete avec Ctrl+C et n'est jamais demarre par
+`bootstrap`.
 
 ## Reflexe avant mutation SCRIBE
 

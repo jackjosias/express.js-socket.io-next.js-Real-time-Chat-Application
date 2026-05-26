@@ -1,14 +1,30 @@
 from __future__ import annotations
 
 
-AGENTS_START = "<!-- SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:START -->"
-AGENTS_END = "<!-- SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:END -->"
-GRAPHIFY_START = "# SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:START"
-GRAPHIFY_END = "# SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:END"
-LEGACY_AGENTS_START = "<!-- SCRIBE-ENGINEERING-RAG:START -->"
-LEGACY_AGENTS_END = "<!-- SCRIBE-ENGINEERING-RAG:END -->"
-LEGACY_GRAPHIFY_START = "# SCRIBE-ENGINEERING-RAG:START"
-LEGACY_GRAPHIFY_END = "# SCRIBE-ENGINEERING-RAG:END"
+AGENTS_START = "<!-- SCRIBE-PORTABLE-WORKFLOW:START -->"
+AGENTS_END = "<!-- SCRIBE-PORTABLE-WORKFLOW:END -->"
+GRAPHIFY_START = "# SCRIBE-PORTABLE-WORKFLOW:START"
+GRAPHIFY_END = "# SCRIBE-PORTABLE-WORKFLOW:END"
+LEGACY_LOCAL_AGENTS_START = "<!-- SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:START -->"
+LEGACY_LOCAL_AGENTS_END = "<!-- SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:END -->"
+LEGACY_RAG_AGENTS_START = "<!-- SCRIBE-ENGINEERING-RAG:START -->"
+LEGACY_RAG_AGENTS_END = "<!-- SCRIBE-ENGINEERING-RAG:END -->"
+LEGACY_LOCAL_GRAPHIFY_START = "# SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:START"
+LEGACY_LOCAL_GRAPHIFY_END = "# SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:END"
+LEGACY_RAG_GRAPHIFY_START = "# SCRIBE-ENGINEERING-RAG:START"
+LEGACY_RAG_GRAPHIFY_END = "# SCRIBE-ENGINEERING-RAG:END"
+LEGACY_AGENTS_START = LEGACY_RAG_AGENTS_START
+LEGACY_AGENTS_END = LEGACY_RAG_AGENTS_END
+LEGACY_GRAPHIFY_START = LEGACY_RAG_GRAPHIFY_START
+LEGACY_GRAPHIFY_END = LEGACY_RAG_GRAPHIFY_END
+LEGACY_AGENTS_MARKERS = (
+    (LEGACY_LOCAL_AGENTS_START, LEGACY_LOCAL_AGENTS_END),
+    (LEGACY_RAG_AGENTS_START, LEGACY_RAG_AGENTS_END),
+)
+LEGACY_GRAPHIFY_MARKERS = (
+    (LEGACY_LOCAL_GRAPHIFY_START, LEGACY_LOCAL_GRAPHIFY_END),
+    (LEGACY_RAG_GRAPHIFY_START, LEGACY_RAG_GRAPHIFY_END),
+)
 PORTABLE_RELATIVE_PATH = ".agent/workflow/scribe"
 SEL_RELATIVE_PATH = f"{PORTABLE_RELATIVE_PATH}/sel"
 RAG_RELATIVE_PATH = f"{PORTABLE_RELATIVE_PATH}/rag"
@@ -30,16 +46,16 @@ protocole complet.
 
 ## Source canonique
 
-- Bundle portable: `{BUNDLE_RELATIVE_PATH}/`
-- SEL moteur interne: `{BUNDLE_COMMAND}`
-- Interface retrieval agent: `{RAG_COMMAND}`
-- Protocole canonique: `{SEL_RELATIVE_PATH}/docs/scribe.md`
+- Racine portable unique: `{BUNDLE_RELATIVE_PATH}/`
+- CLI maintenance interne: `{BUNDLE_COMMAND}`
+- CLI lecture agent: `{RAG_COMMAND}`
+- Protocole complet: `{SEL_RELATIVE_PATH}/docs/scribe.md`
 - Regles locales: `{SEL_RELATIVE_PATH}/docs/AGENTS.md`
 - Installation multi-agent: `{SEL_RELATIVE_PATH}/docs/multi-agent-installation.md`
 
-Ne jamais utiliser `.agent/workflows/scribe.md` ni
-`docs/archive/scribe.v3.1.md.old` comme source active. Ce sont des chemins
-historiques ou archives.
+Tout chemin SCRIBE hors de `{BUNDLE_RELATIVE_PATH}/` est non canonique. Ne pas
+creer de dossier de compatibilite visible; corriger les anciens appels vers les
+commandes ci-dessus.
 
 ## Reflexe de demarrage
 
@@ -54,7 +70,19 @@ Depuis la racine du projet:
 
 `bootstrap` est idempotent. Il initialise seulement ce qui manque:
 `AGENT-MEMOIRE_PROJECT_STATUS.scribe`, `scribe-out/`, `state.json`,
-`.graphifyignore` et le bloc gere de `AGENTS.md`.
+`.graphifyignore` et le bloc gere de `AGENTS.md`. Il ne lance aucun daemon.
+
+## Dashboard SCRIBE
+
+```bash
+{BUNDLE_COMMAND} dashboard
+{BUNDLE_COMMAND} dashboard --serve --host 127.0.0.1 --port 8765
+```
+
+`dashboard` genere un HTML statique dans `scribe-out/`. `dashboard --serve`
+lance a la demande un serveur HTTP local leger (`ThreadingHTTPServer`) pour vue
+live/reload; ce processus s'arrete avec Ctrl+C et n'est jamais demarre par
+`bootstrap`.
 
 ## Reflexe avant mutation SCRIBE
 
@@ -216,8 +244,10 @@ Read `{SCRIBE_RULE_PATH}` as the host-agent always-on summary; the full protocol
 Critical local rules:
 - SEL internal engine from the project root: `{BUNDLE_COMMAND}`. Do not call SEL directly for agent retrieval; use it only for bootstrap, doctor, lock, sync/state, export, archive, graph maintenance, and SCRIBE writes.
 - Agent retrieval interface: `{RAG_COMMAND}` only. Use scribe-rag for `build`, `context`, `query`, `explain`, and `challenge`; it calls SEL internally through the portable SEL command.
-- First command after copying `.agent` into a project: `{BUNDLE_COMMAND} bootstrap`. It is idempotent and initializes only missing project-local surfaces.
+- First command after copying `{BUNDLE_RELATIVE_PATH}/` into a project: `{BUNDLE_COMMAND} bootstrap`. It is idempotent, initializes only missing project-local surfaces, and never starts a daemon.
+- Any SCRIBE path outside `{BUNDLE_RELATIVE_PATH}/` is non-canonical; old callers must migrate to the root commands above instead of recreating compatibility folders.
 - Do not assume root `./scribe` or root `scripts/` exist; they are opt-in legacy adapters generated only with `{BUNDLE_COMMAND} install --with-root-adapters`.
+- Dashboard is available as `{BUNDLE_COMMAND} dashboard` for static HTML and `{BUNDLE_COMMAND} dashboard --serve --host 127.0.0.1 --port 8765` for an opt-in local live server.
 - For installation, migration, or several agents working on the same repo, read `{SEL_RELATIVE_PATH}/docs/multi-agent-installation.md` before editing.
 - Read `graphify-out/GRAPH_REPORT.md` before architecture or codebase work when it exists.
 - Keep root `graphify-out/` focused on application code; SCRIBE/TENOR tooling is ignored by root `.graphifyignore`.

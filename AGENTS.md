@@ -1,4 +1,4 @@
-<!-- SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:START -->
+<!-- SCRIBE-PORTABLE-WORKFLOW:START -->
 ## SCRIBE/TENOR Local Causal Retrieval Bundle
 
 The reusable SCRIBE/TENOR local causal retrieval bundle lives in:
@@ -11,8 +11,10 @@ Read `.agent/rules/scribe.md` as the host-agent always-on summary; the full prot
 Critical local rules:
 - SEL internal engine from the project root: `.agent/workflow/scribe/scribe`. Do not call SEL directly for agent retrieval; use it only for bootstrap, doctor, lock, sync/state, export, archive, graph maintenance, and SCRIBE writes.
 - Agent retrieval interface: `.agent/workflow/scribe/scribe-rag` only. Use scribe-rag for `build`, `context`, `query`, `explain`, and `challenge`; it calls SEL internally through the portable SEL command.
-- First command after copying `.agent` into a project: `.agent/workflow/scribe/scribe bootstrap`. It is idempotent and initializes only missing project-local surfaces.
+- First command after copying `.agent/workflow/scribe/` into a project: `.agent/workflow/scribe/scribe bootstrap`. It is idempotent, initializes only missing project-local surfaces, and never starts a daemon.
+- Any SCRIBE path outside `.agent/workflow/scribe/` is non-canonical; old callers must migrate to the root commands above instead of recreating compatibility folders.
 - Do not assume root `./scribe` or root `scripts/` exist; they are opt-in legacy adapters generated only with `.agent/workflow/scribe/scribe install --with-root-adapters`.
+- Dashboard is available as `.agent/workflow/scribe/scribe dashboard` for static HTML and `.agent/workflow/scribe/scribe dashboard --serve --host 127.0.0.1 --port 8765` for an opt-in local live server.
 - For installation, migration, or several agents working on the same repo, read `.agent/workflow/scribe/sel/docs/multi-agent-installation.md` before editing.
 - Read `graphify-out/GRAPH_REPORT.md` before architecture or codebase work when it exists.
 - Keep root `graphify-out/` focused on application code; SCRIBE/TENOR tooling is ignored by root `.graphifyignore`.
@@ -30,7 +32,7 @@ Critical local rules:
 - `.agent/workflow/scribe/scribe graphify-hooks --apply` reapplies and verifies the stdin-consuming Graphify hook patch after any Graphify reinstall or upgrade.
 - Graphify upstream PR diff is preserved in `.agent/workflow/scribe/sel/patches/graphify-upstream-hook-stdin.patch` when direct PR tooling is unavailable.
 - `.agent/workflow/scribe/scribe worktree` separates generated noise from source changes before delivery.
-<!-- SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:END -->
+<!-- SCRIBE-PORTABLE-WORKFLOW:END -->
 
 ## graphify
 

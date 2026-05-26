@@ -13,10 +13,8 @@ from scribe_install_templates import (
     AGENTS_START,
     GRAPHIFY_END,
     GRAPHIFY_START,
-    LEGACY_AGENTS_END,
-    LEGACY_AGENTS_START,
-    LEGACY_GRAPHIFY_END,
-    LEGACY_GRAPHIFY_START,
+    LEGACY_AGENTS_MARKERS,
+    LEGACY_GRAPHIFY_MARKERS,
     render_agents_block,
     render_graphify_block,
     render_module_shim,
@@ -172,14 +170,14 @@ class Installer:
             AGENTS_START,
             AGENTS_END,
             render_agents_block(),
-            legacy_markers=((LEGACY_AGENTS_START, LEGACY_AGENTS_END),),
+            legacy_markers=LEGACY_AGENTS_MARKERS,
         )
         self.plan_managed_text(
             self.target_root / ".graphifyignore",
             GRAPHIFY_START,
             GRAPHIFY_END,
             render_graphify_block(),
-            legacy_markers=((LEGACY_GRAPHIFY_START, LEGACY_GRAPHIFY_END),),
+            legacy_markers=LEGACY_GRAPHIFY_MARKERS,
         )
 
     def plan_copy(self, source: Path, destination: Path) -> None:

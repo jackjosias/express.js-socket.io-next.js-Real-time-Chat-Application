@@ -2716,16 +2716,81 @@ journal:
       surfaces_touched: ["scribe"]
       collisions_detected: 0
       stale_syncs: 0
+  - id: "JOURNAL-083"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    agent_type: "cli"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-007", "GHOST-008", "GHOST-011", "PAT-024"]
+    l0_abstract: "Aligned host SCRIBE rules with portable root and dashboard serve semantics."
+    pourquoi: >
+      The user caught two documentation gaps after the mono-folder migration: `.agent/rules/scribe.md` did not explicitly forbid visible legacy workflow directories, and the dashboard had an opt-in local HTTP server that was not called out in the host rule.
+      The generated rule template, root AGENTS managed block, `.graphifyignore` markers, and GEMINI memory now state the strict portable root and distinguish static dashboard generation from `dashboard --serve`, which starts only a user-launched local `ThreadingHTTPServer` and is never started by bootstrap.
+    validations:
+      - "`.agent/rules/scribe.md` documents no legacy sibling dirs, bootstrap no daemon, static dashboard, and opt-in `dashboard --serve`."
+      - "`AGENTS.md` managed block uses `SCRIBE-PORTABLE-WORKFLOW` markers and documents old caller migration plus dashboard commands."
+      - "`.graphifyignore` managed markers now use `SCRIBE-PORTABLE-WORKFLOW`."
+      - "`python3 -m py_compile .agent/workflow/scribe/sel/scripts/scribe_install.py .agent/workflow/scribe/sel/scripts/scribe_install_templates.py` passed."
+    scribe_delta: "JOURNAL-083 | rules/dashboard portability correction"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
+  - id: "JOURNAL-084"
+    date: "2026-05-26"
+    mode: "CRITICAL"
+    agent_type: "cli"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-011", "PAT-024"]
+    l0_abstract: "Removed obsolete hot-rule path references after portable-root review."
+    pourquoi: >
+      The host always-on rule still named historical SCRIBE locations and used older wording even after the mono-folder migration.
+      The rule and generator now state only the portable root, maintenance CLI, retrieval CLI, and canonical docs; AGENTS.md now says to copy `.agent/workflow/scribe/` specifically, not the whole `.agent` tree.
+    validations:
+      - "`.agent/rules/scribe.md` no longer names `.agent/workflows/scribe.md` or `docs/archive/...` as hot-rule paths."
+      - "`AGENTS.md` says first command after copying `.agent/workflow/scribe/`, not after copying `.agent`."
+      - "Scan for obsolete active hot-rule wording returned no matches in `.agent/rules/scribe.md`, `AGENTS.md`, and `scribe_install_templates.py`."
+      - "`python3 -m py_compile .agent/workflow/scribe/sel/scripts/scribe_install.py .agent/workflow/scribe/sel/scripts/scribe_install_templates.py` passed."
+    scribe_delta: "JOURNAL-084 | hot-rule obsolete path cleanup"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
+  - id: "JOURNAL-085"
+    date: "2026-05-26"
+    mode: "STANDARD"
+    agent_type: "cli"
+    surface: "scribe"
+    hot_entries_consulted: ["GHOST-011", "JOURNAL-084"]
+    l0_abstract: "Aligned global GEMINI memory with the strict SCRIBE portable-root contract."
+    pourquoi: >
+      The user asked whether `/home/jack-josias/.gemini/GEMINI.md` was truly current.
+      Verification showed the global memory pointed to the right root but still used older labels and explicitly named obsolete sibling paths.
+      The global block now mirrors the hot rule: one portable root, maintenance CLI, agent-reading CLI, no visible compatibility directories, and dashboard serve as opt-in local HTTP only.
+    validations:
+      - "`sed -n '126,138p' /home/jack-josias/.gemini/GEMINI.md` shows the portable-root block."
+      - "`rg` found no obsolete SCRIBE path/name matches in `/home/jack-josias/.gemini/GEMINI.md`."
+    scribe_delta: "JOURNAL-085 | GEMINI portable-root alignment"
+    multi_agent_context:
+      surface: "scribe"
+      other_agents_active: []
+      surfaces_touched: ["scribe"]
+      collisions_detected: 0
+      stale_syncs: 0
 metrics:
-  sessions_total: 82
+  sessions_total: 85
   scars_total: 3
   vaccins_actifs: 11
   taux_recidive: 0.0
   bugs_prevenus_par_vaccin: 0
   complexite_moyenne: 0.0
   mode_distribution:
-    CRITICAL: 40
-    STANDARD: 39
+    CRITICAL: 42
+    STANDARD: 40
     QUICK: 3
   dette_p0_p1_courante: 0
   dezoom_total: 0

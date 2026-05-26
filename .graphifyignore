@@ -1,4 +1,4 @@
-# SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:START
+# SCRIBE-PORTABLE-WORKFLOW:START
 # Keep the canonical root graph focused on application code.
 # SCRIBE/TENOR tooling is causal/process infrastructure, not app architecture.
 .agent/
@@ -7,4 +7,4 @@
 scribe-out/
 AGENT-MEMOIRE_PROJECT_STATUS.scribe
 AGENTS.md
-# SCRIBE-ENGINEERING-LOCAL-CAUSAL-RETRIEVAL:END
+# SCRIBE-PORTABLE-WORKFLOW:END
